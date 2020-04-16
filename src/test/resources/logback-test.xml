@@ -1,0 +1,19 @@
+<configuration>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- encoders are assigned the type ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+        <encoder>
+            <pattern>%d{HH:mm:ss} %-5.-5level %6.6thread %-20.-20logger{0} | %msg%n</pattern>
+        </encoder>
+
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </root>
+
+    <!--<logger name="de.danielscholz.fileIndexer.persistence.common.Database" level="TRACE" />-->
+    <!--<logger name="de.danielscholz.fileIndexer.actions.IndexFiles" level="TRACE" />-->
+    <!--<logger name="de.danielscholz.fileIndexer.actions.BackupFiles" level="TRACE" />-->
+
+</configuration>
