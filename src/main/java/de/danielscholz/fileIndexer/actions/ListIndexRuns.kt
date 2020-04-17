@@ -13,13 +13,13 @@ class ListIndexRuns(private val pl: PersistenceLayer) {
 
    fun run(dir: File?) {
       if (dir == null) {
-         val list: List<IndexRun> = pl.loadAllIndexRun(IndexRunFailures.INCL_FAILURES)
+         val list = pl.loadAllIndexRun(IndexRunFailures.INCL_FAILURES)
          val maxIdStrLength = list.map { indexRun -> indexRun.id }.max().toString().length
          list.forEach { indexRun ->
             logger.info(format(indexRun, maxIdStrLength))
          }
       } else {
-         val list: List<IndexRunFilePathResult> = pl.getPathList(null, dir.canonicalFile)
+         val list = pl.getPathList(null, dir.canonicalFile)
          val maxIdStrLength = list.map { it.indexRun.id }.max().toString().length
          list.forEach {
             logger.info(format(it.indexRun, maxIdStrLength))
@@ -32,7 +32,7 @@ class ListIndexRuns(private val pl: PersistenceLayer) {
 
    fun format(indexRun: IndexRun, maxIdStrLength: Int): String {
       val description = (indexRun.mediumDescription.isNotEmpty() || indexRun.mediumSerial.isNotEmpty()).ifTrue(
-            "  [" + (indexRun.mediumSerial.ifEmpty("") + " " + indexRun.mediumDescription.ifEmpty("")).trim() + "]", "")
+            "  [vsn: " + (indexRun.mediumSerial.ifEmpty("") + " " + indexRun.mediumDescription.ifEmpty("")).trim() + "]", "")
 
       val fileCount = pl.db.dbQueryUniqueLong(Queries.fileLocation2, listOf(indexRun.id))
 
@@ -48,7 +48,7 @@ class ListIndexRuns(private val pl: PersistenceLayer) {
       str += (indexRun.failureOccurred).ifTrue(", FAILURE occurred", "")
 
       return "No. " + indexRun.id.toString().leftPad(maxIdStrLength) + ": " + indexRun.runDate.convertToLocalZone().toStr() + "  " +
-             indexRun.pathPrefix + indexRun.path + description + "  (number: " + fileCount.toStr() + str + ")"
+             indexRun.pathPrefix + indexRun.path + description + "  (indexed files: " + fileCount.toStr() + str + ")"
    }
 
 }

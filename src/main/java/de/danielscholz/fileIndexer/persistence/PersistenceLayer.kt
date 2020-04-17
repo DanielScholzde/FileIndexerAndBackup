@@ -1,10 +1,7 @@
 package de.danielscholz.fileIndexer.persistence
 
 import de.danielscholz.fileIndexer.Config
-import de.danielscholz.fileIndexer.common.calcFilePathPrefix
-import de.danielscholz.fileIndexer.common.calcPathWithoutPrefix
-import de.danielscholz.fileIndexer.common.formatOtherData
-import de.danielscholz.fileIndexer.common.getVolumeSerialNr
+import de.danielscholz.fileIndexer.common.*
 import de.danielscholz.fileIndexer.matching.MatchMode
 import de.danielscholz.fileIndexer.matching.plus
 import de.danielscholz.fileIndexer.matching.union
@@ -14,6 +11,7 @@ import de.danielscholz.fileIndexer.persistence.common.getIndexRunSqlAttr
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.sql.ResultSet
+import kotlin.collections.listOf
 
 open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
 
@@ -83,28 +81,32 @@ open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
 
       val cond = when (failures) {
          IndexRunFailures.INCL_FAILURES -> ""
-         IndexRunFailures.EXCL_FAILURES -> "AND r.failureOccurred = 0"
-         IndexRunFailures.ONLY_FAILURES -> "AND r.failureOccurred = 1"
+         IndexRunFailures.EXCL_FAILURES -> "r.failureOccurred = 0 AND"
+         IndexRunFailures.ONLY_FAILURES -> "r.failureOccurred = 1 AND"
       }
 
-      val params = mutableListOf(pathWithoutPrefix)
+      val params = mutableListOf<String>()
 
       val cond2 = if (mediumSerial != null) {
          params.add(mediumSerial)
-         "AND r.mediumSerial = ?"
+         "r.mediumSerial = ?"
       } else {
          params.add(pathPrefix!!)
-         "AND lower(r.pathPrefix) = lower(?)"
+         "lower(r.pathPrefix) = lower(?)"
       }
 
       return db.dbQuery(
-            "SELECT distinct ${getIndexRunSqlAttr("r")}" +
+            "SELECT distinct ${getIndexRunSqlAttr("r")} " +
             " FROM IndexRun r " +
-            " WHERE instr(?, r.path) = 1 " +
+            " WHERE " +
             "       $cond " +
             "       $cond2 " +
             " ORDER BY r.runDate DESC, r.id DESC ", params) {
          extractIndexRun(it, "r")!!
+      }.filter { indexRun ->
+         pathWithoutPrefix.startsWith(indexRun.path) ||
+         (indexRun.isBackup &&
+          pathWithoutPrefix.ensureSuffix("/") == indexRun.path.substring(0, indexRun.path.lastIndexOf('/', indexRun.path.lastIndex - 1) + 1))
       }
    }
 
@@ -171,12 +173,12 @@ open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
       val result = mutableListOf<IndexRunFilePathResult>()
       val serial = if (mediumSerial == "auto") getVolumeSerialNr(dir, null) else mediumSerial
       val pathPrefix = if (serial == null) calcFilePathPrefix(dir) else null
-      val dirOhnePrefix = calcPathWithoutPrefix(dir)
-      for (indexRun in findAllIndexRun(serial, dirOhnePrefix, pathPrefix, failures)) {
+      val dirWithoutPrefix = calcPathWithoutPrefix(dir)
+      for (indexRun in findAllIndexRun(serial, dirWithoutPrefix, pathPrefix, failures)) {
          if (fromIndexRunId != null && indexRun.id < fromIndexRunId) {
             continue
          }
-         val relPath = "/" + dirOhnePrefix.removePrefix(indexRun.path)
+         val relPath = "/" + if (dirWithoutPrefix.startsWith(indexRun.path)) dirWithoutPrefix.removePrefix(indexRun.path) else ""  // todo find better solution in case of backup
          val filePath = getFilePath(File(relPath))
          if (filePath != null) {
             if (filePath.id == Queries.filePathRootId) {
