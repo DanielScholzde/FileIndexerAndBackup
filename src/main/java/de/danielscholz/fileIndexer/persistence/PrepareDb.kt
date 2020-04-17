@@ -54,6 +54,7 @@ object PrepareDb {
                 mediumSerial TEXT,
                 runDate INTEGER NOT NULL,
                 readonlyMedium INTEGER NOT NULL,
+                isBackup INTEGER NOT NULL,
                 onlyReadFirstMbOfContentForHash INTEGER,
                 mediumCaseSensitive INTEGER NOT NULL,
                 excludedPaths TEXT NOT NULL,

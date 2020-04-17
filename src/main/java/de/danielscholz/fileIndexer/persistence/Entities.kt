@@ -87,6 +87,7 @@ data class IndexRun(
       val mediumCaseSensitive: Boolean,
       val runDate: Instant, // date of index run
       val readonlyMedium: Boolean,
+      val isBackup: Boolean, // true, if created by BackupFiles
       val onlyReadFirstMbOfContentForHash: Int?, // marker, if only the first MB of file content was read for calculation the hash
       val totalSpace: Long,
       var usableSpace: Long, // will be set later

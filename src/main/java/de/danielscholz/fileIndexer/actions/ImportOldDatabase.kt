@@ -127,6 +127,7 @@ class ImportOldDatabase(val pl: PersistenceLayer) {
                               false,
                               (backupRun.backupDate * 1000).toInstant(),
                               false,
+                              true,
                               null,
                               0,
                               0,

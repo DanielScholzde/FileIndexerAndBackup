@@ -120,6 +120,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
                                        testCaseSensitive(targetDir),
                                        now,
                                        false,
+                                       true,
                                        if (Config.createHashOnlyForFirstMb) 1 else null,
                                        Files.getFileStore(targetDir.toPath()).totalSpace,
                                        -1, // updated after backup completed
