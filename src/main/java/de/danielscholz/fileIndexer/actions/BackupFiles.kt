@@ -70,11 +70,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
 
       val mediumSerialT = getVolumeSerialNr(targetDir, mediumSerialTarget)
 
-      val existingBackupsIndexRun = targetDir.listFiles()?.asList()
-                                       ?.filter { it.isDirectory }
-                                       ?.mapNotNull { pl.getNewestPath(mediumSerialT, it, false) }
-                                       ?.sortedByDescending { it.indexRun.runDate }
-                                    ?: listOf()
+      val existingBackupsIndexRun = pl.getPathList(mediumSerialT, targetDir, false)
 
       var allNotEmptyExistingBackupFiles: Collection<FileLocation> = listOf()
       var newestExistingBackupFiles: Collection<FileLocation> = listOf()
