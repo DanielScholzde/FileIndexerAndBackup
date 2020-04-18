@@ -25,7 +25,7 @@ class VerifyTest : BaseTest() {
          main(arrayOf(Commands.VERIFY_FILES.command, "--db", dbname, "$root/subdir"))
       }
 
-      assertThat(systemOut, containsString("Keine Differenzen gefunden"))
+      assertThat(systemOut, containsString("No difference found"))
    }
 
    @Test
@@ -43,7 +43,7 @@ class VerifyTest : BaseTest() {
          main(arrayOf(Commands.VERIFY_FILES.command, "--db", dbname, "$root/subdir"))
       }
 
-      assertThat(systemOut, containsString("subdir\\a.txt Änderungsdatum hat sich geändert"))
+      assertThat(systemOut, containsString("subdir\\a.txt file modification date is different"))
    }
 
    @Test
@@ -58,7 +58,7 @@ class VerifyTest : BaseTest() {
          main(arrayOf(Commands.VERIFY_FILES.command, "--db", dbname, "$root/subdir"))
       }
 
-      assertThat(systemOut, containsString("subdir\\a.txt Dateigröße hat sich geändert"))
+      assertThat(systemOut, containsString("subdir\\a.txt file size is different"))
    }
 
    @Test
@@ -76,7 +76,7 @@ class VerifyTest : BaseTest() {
          main(arrayOf(Commands.VERIFY_FILES.command, "--db", dbname, "$root/subdir"))
       }
 
-      assertThat(systemOut, containsString("subdir\\a.txt Differenz im Inhalt vorhanden"))
+      assertThat(systemOut, containsString("subdir\\a.txt has different hash"))
    }
 
 }
