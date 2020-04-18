@@ -22,7 +22,7 @@ class VerifyTest : BaseTest() {
 //         println(pl.db.queryDebug("Select * from FileMeta "))
          }
 
-         main(arrayOf(Commands.VERIFY.command, "--db", dbname, "$root/subdir"))
+         main(arrayOf(Commands.VERIFY_FILES.command, "--db", dbname, "$root/subdir"))
       }
 
       assertThat(systemOut, containsString("Keine Differenzen gefunden"))
@@ -40,7 +40,7 @@ class VerifyTest : BaseTest() {
 
          File("$root/subdir/a.txt").setLastModified(Instant.now().toEpochMilli() - 10000)
 
-         main(arrayOf(Commands.VERIFY.command, "--db", dbname, "$root/subdir"))
+         main(arrayOf(Commands.VERIFY_FILES.command, "--db", dbname, "$root/subdir"))
       }
 
       assertThat(systemOut, containsString("subdir\\a.txt Änderungsdatum hat sich geändert"))
@@ -55,7 +55,7 @@ class VerifyTest : BaseTest() {
 
          Files.write(File("$root/subdir/a.txt").toPath(), ByteArray(0), StandardOpenOption.TRUNCATE_EXISTING)
 
-         main(arrayOf(Commands.VERIFY.command, "--db", dbname, "$root/subdir"))
+         main(arrayOf(Commands.VERIFY_FILES.command, "--db", dbname, "$root/subdir"))
       }
 
       assertThat(systemOut, containsString("subdir\\a.txt Dateigröße hat sich geändert"))
@@ -73,7 +73,7 @@ class VerifyTest : BaseTest() {
          Files.write(file.toPath(), ByteArray(file.length().toInt()), StandardOpenOption.TRUNCATE_EXISTING)
          file.setLastModified(lastModified)
 
-         main(arrayOf(Commands.VERIFY.command, "--db", dbname, "$root/subdir"))
+         main(arrayOf(Commands.VERIFY_FILES.command, "--db", dbname, "$root/subdir"))
       }
 
       assertThat(systemOut, containsString("subdir\\a.txt Differenz im Inhalt vorhanden"))

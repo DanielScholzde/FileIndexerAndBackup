@@ -20,7 +20,7 @@ class ModifiedExifTest : BaseTest() {
          println(pl.db.queryDebug("Select * from FileMeta "))
       }
 
-      main(arrayOf(Commands.CORRECT_DIFF_MODIFIED_EXIF.command, "--db", dbname, "$root/subdir/"))
+      main(arrayOf(Commands.CORRECT_DIFF_IN_FILE_MODIFICATION_DATE_AND_EXIF_DATE_TAKEN.command, "--db", dbname, "$root/subdir/"))
 
       val dateTime = File("$root/subdir/image.jpg").lastModified().toInstant().convertToUtcZone()
       assertEquals(2018, dateTime.year)

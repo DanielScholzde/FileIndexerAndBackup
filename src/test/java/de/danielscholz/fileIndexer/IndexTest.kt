@@ -88,7 +88,7 @@ class IndexTest : BaseTest() {
          println("Inserts/Sek.: " + (max / ((System.currentTimeMillis() - start) / 1000.0)).toInt())
       }
 
-      main(arrayOf(Commands.LIST_INDEXE.command, "--db", ":memory:")) { pl ->
+      main(arrayOf(Commands.LIST_INDEX_RUNS.command, "--db", ":memory:")) { pl ->
          transaction(logger, pl.db) {
             test(pl)
          }

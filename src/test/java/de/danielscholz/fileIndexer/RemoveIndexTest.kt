@@ -27,7 +27,7 @@ class RemoveIndexTest : BaseTest() {
          assertThat(i5, greaterThan(1))
       }
 
-      main(arrayOf(Commands.REMOVE_INDEX.command, "--db", dbname, "1")) { pl ->
+      main(arrayOf(Commands.REMOVE_INDEX_RUN.command, "--db", dbname, "1")) { pl ->
          val i1 = pl.db.dbQueryUniqueInt("Select count(*) from FileLocation ")
          val i2 = pl.db.dbQueryUniqueInt("Select count(*) from FileContent ")
          val i3 = pl.db.dbQueryUniqueInt("Select count(*) from FileMeta ")
@@ -68,7 +68,7 @@ class RemoveIndexTest : BaseTest() {
          assertEquals(filePathCount + 1, i5)
       }
 
-      main(arrayOf(Commands.REMOVE_INDEX.command, "--db", dbname, "2")) { pl ->
+      main(arrayOf(Commands.REMOVE_INDEX_RUN.command, "--db", dbname, "2")) { pl ->
          val i1 = pl.db.dbQueryUniqueInt("Select count(*) from FileLocation ")
          val i2 = pl.db.dbQueryUniqueInt("Select count(*) from FileContent ")
          val i3 = pl.db.dbQueryUniqueInt("Select count(*) from FileMeta ")

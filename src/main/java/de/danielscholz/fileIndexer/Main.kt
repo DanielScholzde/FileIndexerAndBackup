@@ -221,7 +221,7 @@ private fun createParser(outerCallback: (GlobalParams, (PersistenceLayer) -> Uni
       }
 
       addActionParser(
-            Commands.VERIFY.command,
+            Commands.VERIFY_FILES.command,
             ArgParserBuilder(VerifyFilesParams()).buildWith {
                add(Config::fastMode, BooleanParam())
                add(Config::ignoreHashInFastMode, BooleanParam())
@@ -237,8 +237,8 @@ private fun createParser(outerCallback: (GlobalParams, (PersistenceLayer) -> Uni
       }
 
       addActionParser(
-            Commands.COMPARE_INDEXE.command,
-            ArgParserBuilder(CompareIndexeParams()).buildWith {
+            Commands.COMPARE_INDEX_RUNS.command,
+            ArgParserBuilder(CompareIndexRunsParams()).buildWith {
                addNamelessLast(paramValues::indexNr1, IntParam(), "Directory 1", true)
                addNamelessLast(paramValues::indexNr2, IntParam(), "Directory 2", true)
             }) {
@@ -248,8 +248,8 @@ private fun createParser(outerCallback: (GlobalParams, (PersistenceLayer) -> Uni
       }
 
       addActionParser(
-            Commands.DELETE_DUPLICATES.command,
-            ArgParserBuilder(FindDuplicatesParams()).buildWith {
+            Commands.DELETE_DUPLICATE_FILES.command,
+            ArgParserBuilder(DeleteDuplicateFilesParams()).buildWith {
                add(paramValues::deleteDuplicates, BooleanParam())
                add(paramValues::inclFilenameOnCompare, BooleanParam())
                add(paramValues::printOnlyDeleted, BooleanParam())
@@ -267,8 +267,8 @@ private fun createParser(outerCallback: (GlobalParams, (PersistenceLayer) -> Uni
       }
 
       addActionParser(
-            Commands.FIND_NOCOPY.command,
-            ArgParserBuilder(FindNoCopyParams()).buildWith {
+            Commands.FIND_FILES_WITH_NO_COPY.command,
+            ArgParserBuilder(FindFilesWithNoCopyParams()).buildWith {
                add(paramValues::reverse, BooleanParam())
                addNamelessLast(paramValues::referenceDir, FileParam(true), "Reference directory", true)
                addNamelessLast(paramValues::toSearchInDirs, FileListParam(1..Int.MAX_VALUE, true), "Directories to search in", true)
@@ -282,8 +282,8 @@ private fun createParser(outerCallback: (GlobalParams, (PersistenceLayer) -> Uni
       }
 
       addActionParser(
-            Commands.CORRECT_DIFF_MODIFIED.command,
-            ArgParserBuilder(FindDiffInModifiedDateParams()).buildWith {
+            Commands.CORRECT_DIFF_IN_FILE_MODIFICATION_DATE.command,
+            ArgParserBuilder(CorrectDiffInFileModificationDateParams()).buildWith {
                add(paramValues::ignoreMilliseconds, BooleanParam())
                addNamelessLast(paramValues::referenceDir, FileParam(true), "Reference directory", true)
                addNamelessLast(paramValues::toSearchInDirs, FileListParam(1..Int.MAX_VALUE, true), "Directories to search in", true)
@@ -297,8 +297,8 @@ private fun createParser(outerCallback: (GlobalParams, (PersistenceLayer) -> Uni
       }
 
       addActionParser(
-            Commands.CORRECT_DIFF_MODIFIED_EXIF.command,
-            ArgParserBuilder(FindDiffInModifiedExifParams()).buildWith {
+            Commands.CORRECT_DIFF_IN_FILE_MODIFICATION_DATE_AND_EXIF_DATE_TAKEN.command,
+            ArgParserBuilder(CorrectDiffInFileModificationDateAndExifDateTakenParams()).buildWith {
                add(paramValues::ignoreSecondsDiff, IntParam())
                add(paramValues::ignoreHoursDiff, IntParam())
                addNamelessLast(paramValues::dirs, FileListParam(1..Int.MAX_VALUE, true), "Directories to search in", true)
@@ -312,8 +312,8 @@ private fun createParser(outerCallback: (GlobalParams, (PersistenceLayer) -> Uni
       }
 
       addActionParser(
-            Commands.RENAME_TO_MODIFIED_DATE.command,
-            ArgParserBuilder(RenameToModifiedDateParams()).buildWith {
+            Commands.RENAME_FILES_TO_MODIFICATION_DATE.command,
+            ArgParserBuilder(RenameFilesToModificationDateParams()).buildWith {
                addNamelessLast(paramValues::dirs, FileListParam(1..Int.MAX_VALUE, true), "Directories", true)
             }) {
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
@@ -323,9 +323,9 @@ private fun createParser(outerCallback: (GlobalParams, (PersistenceLayer) -> Uni
       }
 
       addActionParser(
-            Commands.LIST_INDEXE.command,
-            ArgParserBuilder(ListIndexeParams()).buildWith {
-               add(paramValues::dir, FileParam())
+            Commands.LIST_INDEX_RUNS.command,
+            ArgParserBuilder(ListIndexRunsParams()).buildWith {
+               addNamelessLast(paramValues::dir, FileParam(), "Directory")
             }) {
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
             ListIndexRuns(pl).run(paramValues.dir?.canonicalFile)
@@ -335,7 +335,7 @@ private fun createParser(outerCallback: (GlobalParams, (PersistenceLayer) -> Uni
       addActionParser(
             Commands.LIST_PATHS.command,
             ArgParserBuilder(ListPathsParams()).buildWith {
-               add(paramValues::dir, FileParam(), "Directories", true)
+               addNamelessLast(paramValues::dir, FileParam(), "Directory", true)
             }) {
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
             ListPaths(pl).run(paramValues.dir!!.canonicalFile)
@@ -343,8 +343,8 @@ private fun createParser(outerCallback: (GlobalParams, (PersistenceLayer) -> Uni
       }
 
       addActionParser(
-            Commands.REMOVE_INDEX.command,
-            ArgParserBuilder(RemoveIndexParams()).buildWith {
+            Commands.REMOVE_INDEX_RUN.command,
+            ArgParserBuilder(RemoveIndexRunParams()).buildWith {
                addNamelessLast(paramValues::indexNr, IntParam())
                addNamelessLast(paramValues::indexNrRange, IntRangeParam())
             }) {
@@ -368,9 +368,9 @@ private fun createParser(outerCallback: (GlobalParams, (PersistenceLayer) -> Uni
          }
       }
 
-      addActionParser(Commands.SHOW_INFOS.command) {
+      addActionParser(Commands.SHOW_DATABASE_REPORT.command) {
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
-            DatabaseReport(pl).getOverview()
+            ShowDatabaseReport(pl).getOverview()
          }
       }
 

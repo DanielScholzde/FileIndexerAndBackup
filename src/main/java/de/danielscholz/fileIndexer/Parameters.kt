@@ -39,7 +39,7 @@ class BackupFilesParams {
    var indexArchiveContentsOfSourceDir = false
 }
 
-class FindDuplicatesParams {
+class DeleteDuplicateFilesParams {
    var dirs: List<File> = listOf()
    var inclFilenameOnCompare: Boolean = false
    var printOnlyDeleted: Boolean = false
@@ -47,29 +47,29 @@ class FindDuplicatesParams {
    var deletePathFilter: String? = null
 }
 
-class FindNoCopyParams {
+class FindFilesWithNoCopyParams {
    var referenceDir: File? = null
    var toSearchInDirs: List<File> = listOf()
    var reverse: Boolean = false
 }
 
-class FindDiffInModifiedDateParams {
+class CorrectDiffInFileModificationDateParams {
    var referenceDir: File? = null
    var toSearchInDirs: List<File> = listOf()
    var ignoreMilliseconds: Boolean = false
 }
 
-class FindDiffInModifiedExifParams {
+class CorrectDiffInFileModificationDateAndExifDateTakenParams {
    var dirs: List<File> = listOf()
    var ignoreSecondsDiff: Int = 0
    var ignoreHoursDiff: Int = 0
 }
 
-class RenameToModifiedDateParams {
+class RenameFilesToModificationDateParams {
    var dirs: List<File> = listOf()
 }
 
-class ListIndexeParams {
+class ListIndexRunsParams {
    var dir: File? = null
 }
 
@@ -81,12 +81,12 @@ class VerifyFilesParams {
    var dir: File? = null
 }
 
-class RemoveIndexParams {
+class RemoveIndexRunParams {
    var indexNr: Int? = null
    var indexNrRange: IntRange? = null
 }
 
-class CompareIndexeParams {
+class CompareIndexRunsParams {
    var indexNr1: Int = 0
    var indexNr2: Int = 0
 }

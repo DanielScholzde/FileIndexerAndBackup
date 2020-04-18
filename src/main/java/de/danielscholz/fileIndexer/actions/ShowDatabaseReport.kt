@@ -5,7 +5,7 @@ import de.danielscholz.fileIndexer.common.toStr
 import de.danielscholz.fileIndexer.persistence.PersistenceLayer
 import org.slf4j.LoggerFactory
 
-class DatabaseReport(private val pl: PersistenceLayer) {
+class ShowDatabaseReport(private val pl: PersistenceLayer) {
 
    private val logger = LoggerFactory.getLogger(this.javaClass)
 
