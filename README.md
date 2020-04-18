@@ -1,5 +1,6 @@
 ## FileIndexerAndBackup
-#### Index and manage files, create backups like Time Machine, find duplicate files and much more
+
+#### Index and manage files, create backups like Time Machine, sync files, find duplicate files and much more
 
 The goal of this program is to index files (incl. hash and metadata) on different drives and to store this information within one or different database files.
 
@@ -15,11 +16,18 @@ Because all file information is stored in a database, you have information about
 
 Other features are:
 - index files within archives (7z, zip, tar, tar.gz, jar)
-- synchronize files between folders
+- synchronize files between two folders (one-way sync)
+- compare two index runs / folders
 - read EXIF information of images (incl. raw images), for example to check if the file modification date is the same as the date taken and to 
 correct it
 - implement your own tasks or backup strategy with ease
 - mediums are recognized and indexed by their volume serial number
+
+Future plans:
+- customizable two-way sync between two folders
+- REPL for better interaction
+- Remove backup run (database content and files on backup medium; now, file deletion is a manual step after removing an index run)
+- analyze, how much diskspace is used by a concrete backup run (because of the hardlink feature, all files of all other backup runs have to be considered)
 
 Technical information:
 - 100% written in Kotlin
@@ -33,3 +41,7 @@ customizable identity definition
 - all operations can be simulated with the parameter "dryRun"
 - sync und backup can be configured to ask for confirmation if a specific amount of file changes is exceeded
 - designed using the fail-fast principle
+
+Examples:
+
+    java -jar FileIndexerAndBackup.jar  backup --db backupIndex.db  /my/sourcePath  /my/backup/targetPath
