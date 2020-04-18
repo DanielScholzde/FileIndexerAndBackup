@@ -30,7 +30,7 @@ object Config {
 
    var allowMultithreading = true
    val maxThreads = 10
-   var createThumbnails = true
+   var createThumbnails = false
    val thumbnailSize = 600
 
    /** When creating a new index, files will only be recognized by size, modification date and hash of first MB */

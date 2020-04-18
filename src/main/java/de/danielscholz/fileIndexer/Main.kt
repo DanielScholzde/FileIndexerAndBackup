@@ -401,6 +401,7 @@ private fun isTest(): Boolean {
    return Exception().stackTrace.any { it.className.contains(".junit.") }
 }
 
+// todo auto_vacuum
 // todo support mapping of root paths, especially when comparing two indexRuns
 // todo optimize memory usage
 // todo optimize caching
