@@ -75,6 +75,8 @@ internal fun main(args: Array<String>, runBefore: (PersistenceLayer) -> Unit = {
          } else {
             logger.error("The version of the database ${db.dbVersion} does not match the current program version (${Global.programVersion}). Please update the program.")
          }
+
+         db.dbExecNoResult("PRAGMA optimize")
       }
    }
 
