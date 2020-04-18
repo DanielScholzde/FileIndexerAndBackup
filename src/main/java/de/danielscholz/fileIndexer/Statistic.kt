@@ -32,31 +32,29 @@ class Statistic(
 
    fun echoStatistics() {
       for (failedDirRead in failedDirReads) {
-         logger.info("Verzeichnis nicht lesbar: {}", failedDirRead)
+         logger.info("Directory is not readable: {}", failedDirRead)
       }
       for (failedFileRead in failedFileReads) {
-         logger.info("Datei nicht lesbar: {} ({})", failedFileRead.first, failedFileRead.second)
+         logger.info("File is not readable: {} ({})", failedFileRead.first, failedFileRead.second)
       }
 
       if (copiedFilesCount > 0)
-         logger.info("Anzahl der kopierten Dateien: {} (Größe: {})", copiedFilesCount, copiedFilesSize.formatAsFileSize())
+         logger.info("Number of copied files: {} ({})", copiedFilesCount, copiedFilesSize.formatAsFileSize())
       if (deletedFilesCount > 0)
-         logger.info("Anzahl der gelöschten Dateien: {} (Größe: {})", deletedFilesCount, deletedFilesSize.formatAsFileSize())
+         logger.info("Number of deleted files: {} ({})", deletedFilesCount, deletedFilesSize.formatAsFileSize())
       if (indexedFilesCount.get() > 0)
-         logger.info("Anzahl der indexierten Dateien: {} (Größe: {})", indexedFilesCount, indexedFilesSize.get().formatAsFileSize())
+         logger.info("Number of indexed files: {} ({})", indexedFilesCount, indexedFilesSize.get().formatAsFileSize())
       if (newIndexedFilesCount.get() > 0)
-         logger.info("Anzahl der NEU in den Index aufgenommenen Dateien: {} (Größe: {})",
-                     newIndexedFilesCount,
-                     newIndexedFilesSize.get().formatAsFileSize())
+         logger.info("Number of NEW indexed files: {} ({})", newIndexedFilesCount, newIndexedFilesSize.get().formatAsFileSize())
 
       if (fastModeHitCount.get() > 0) {
-         logger.info("Durch FAST_MODE eingesparte DB-Abfragen: {}",
+         logger.info("With FAST_MODE saved db queries: {}",
                      "" + (fastModeHitCount.get() * 100.0 /
                            (fastModeHitCount.get() + notFastModeHitCount.get())).roundToInt()
-                     + "% (" + fastModeHitCount.get() + " insgesamt)")
+                     + "% (" + fastModeHitCount.get() + " total)")
       }
 
-      logger.debug("Langsamstes SQL ({} s):\n{}", maxQueryTime.get() / 100000000 / 10.0, maxQuerySql)
+      logger.debug("Most time consuming SQL ({} sec):\n{}", maxQueryTime.get() / 100000000 / 10.0, maxQuerySql)
       logger.info("")
    }
 }
