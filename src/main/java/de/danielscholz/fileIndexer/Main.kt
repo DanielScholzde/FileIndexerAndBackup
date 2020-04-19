@@ -2,10 +2,7 @@ package de.danielscholz.fileIndexer
 
 import ch.qos.logback.classic.LoggerContext
 import de.danielscholz.fileIndexer.actions.*
-import de.danielscholz.fileIndexer.common.ensureSuffix
-import de.danielscholz.fileIndexer.common.registerLowMemoryListener
-import de.danielscholz.fileIndexer.common.registerShutdownCallback
-import de.danielscholz.fileIndexer.common.tryWith
+import de.danielscholz.fileIndexer.common.*
 import de.danielscholz.fileIndexer.gui.InfopanelSwing
 import de.danielscholz.fileIndexer.persistence.PersistenceLayer
 import de.danielscholz.fileIndexer.persistence.PrepareDb
@@ -17,6 +14,7 @@ import de.danielscholz.kargparser.ArgParserBuilder
 import de.danielscholz.kargparser.ArgParserConfig
 import de.danielscholz.kargparser.parser.*
 import org.slf4j.LoggerFactory
+import java.io.Console
 import java.io.File
 import java.util.*
 
@@ -41,7 +39,7 @@ internal fun main(args: Array<String>, runBefore: (PersistenceLayer) -> Unit = {
    }
    registerLowMemoryListener()
 
-   val parser = createParser { globalParams: GlobalParams, command: (PersistenceLayer) -> Unit ->
+   val parser = createParser(true) { globalParams: GlobalParams, command: (PersistenceLayer) -> Unit ->
       if (globalParams.db == null) globalParams.db = File("IndexedFiles")
       val inMemoryDb = globalParams.db!!.name == ":memory:"
       if (!inMemoryDb) {
@@ -81,9 +79,7 @@ internal fun main(args: Array<String>, runBefore: (PersistenceLayer) -> Unit = {
    }
 
    try {
-      if (isHelpFallback(args)) { // offer some more options for showing help
-         logger.info(parser.printout())
-      } else {
+      if (!printoutHelp(args, parser)) {
          parser.parseArgs(args)
       }
    } catch (e: ArgParseException) {
@@ -93,12 +89,17 @@ internal fun main(args: Array<String>, runBefore: (PersistenceLayer) -> Unit = {
 }
 
 @Suppress("DuplicatedCode")
-private fun createParser(outerCallback: (GlobalParams, (PersistenceLayer) -> Unit) -> Unit): ArgParser<GlobalParams> {
+private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (PersistenceLayer) -> Unit) -> Unit): ArgParser<GlobalParams> {
    return ArgParserBuilder(GlobalParams()).buildWith(ArgParserConfig(ignoreCase = true, noPrefixForActionParams = true)) {
       val globalParams = paramValues
 
-      addActionParser("help", "Show all available options and commands") { logger.info(printout()) }
-      add(paramValues::db, FileParam())
+      addActionParser("help", "Show all available options and commands") {
+         logger.info(printout())
+      }
+
+      if (toplevel) {
+         add(globalParams::db, FileParam())
+      }
       add(Config::dryRun, BooleanParam())
       add(Config::verbose, BooleanParam())
       add(Config::headless, BooleanParam())
@@ -106,6 +107,19 @@ private fun createParser(outerCallback: (GlobalParams, (PersistenceLayer) -> Uni
       add(Config::allowMultithreading, BooleanParam())
       add(Config::excludedPaths, StringSetParam(mapper = { it.replace('\\', '/') }))
       add(Config::excludedFiles, StringSetParam(mapper = { it.replace('\\', '/') }))
+
+      if (toplevel) {
+         addActionParser(Commands.CONSOLE.command) {
+            val console = System.console()
+            if (console == null) {
+               logger.error("Console not supported!")
+            } else {
+               outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
+                  processConsoleInputs(console, pl)
+               }
+            }
+         }
+      }
 
       addActionParser(
             Commands.INDEX_FILES.command,
@@ -387,14 +401,82 @@ private fun createParser(outerCallback: (GlobalParams, (PersistenceLayer) -> Uni
             ImportOldDatabase(pl).import(paramValues.oldDb!!.canonicalFile, paramValues.mediumSerial, paramValues.mediumDescription)
          }
       }
+
+      addActionParser(Commands.STATUS.command) {
+         logger.info("verbose = ${Config.verbose}")
+         logger.info("silent = ${Config.silent}")
+         logger.info("headless = ${Config.headless}")
+         logger.info("dryRun = ${Config.dryRun}")
+         logger.info("fastMode = ${Config.fastMode}")
+         logger.info("ignoreHashInFastMode = ${Config.ignoreHashInFastMode}")
+         logger.info("excludedFiles = ${Config.excludedFiles}")
+         logger.info("excludedPaths = ${Config.excludedPaths}")
+         logger.info("defaultExcludedFiles = ${Config.defaultExcludedFiles}")
+         logger.info("defaultExcludedPaths = ${Config.defaultExcludedPaths}")
+         logger.info("allowMultithreading = ${Config.allowMultithreading}")
+         logger.info("createThumbnails = ${Config.createThumbnails}")
+         logger.info("maxChangedFilesWarningPercent = ${Config.maxChangedFilesWarningPercent}")
+         logger.info("minAllowedChanges = ${Config.minAllowedChanges}")
+         logger.info("minDiskFreeSpacePercent = ${Config.minDiskFreeSpacePercent}")
+         logger.info("minDiskFreeSpaceMB = ${Config.minDiskFreeSpaceMB}")
+      }
+
+      if (!toplevel) {
+         addActionParser(Commands.EXIT.command) {
+            Global.cancel = true
+         }
+      }
    }
 }
 
-private fun isHelpFallback(args: Array<String>): Boolean {
-   if (args.size == 1) {
-      return args[0] in setOf("/h", "/help", "/?", "--?", "?")
+private fun printoutHelp(args: Array<String>, parser: ArgParser<GlobalParams>): Boolean {
+   // offer some more options for showing help and to get help for a specific command
+   val helpArguments = setOf("/?", "--?", "?", "--help")
+   var foundIdx = -1
+   if (args.anyIndexed { idx, arg ->
+            if (arg in helpArguments) {
+               foundIdx = idx
+               true
+            } else false
+         }) {
+      val argumentsWithoutHelp = args.toMutableList()
+      argumentsWithoutHelp.removeAt(foundIdx)
+      logger.info(parser.printout(argumentsWithoutHelp.toTypedArray(), false))
+      return true
    }
    return false
+}
+
+private fun processConsoleInputs(console: Console, pl: PersistenceLayer) {
+   while (true) {
+      if (Global.cancel) break
+      print("> ")
+      val line = console.readLine()
+      if (Global.cancel) break
+      val arguments = parseCmd(line)
+      if (arguments.isEmpty()) {
+         continue
+      } else {
+         val parser = createParser(false) { globalParams: GlobalParams, command: (PersistenceLayer) -> Unit ->
+            try {
+               command(pl)
+            } catch (e: Exception) {
+               e.printStackTrace()
+               pl.db.rollback()
+            } finally {
+               // todo
+            }
+         }
+         try {
+            val args = arguments.toTypedArray()
+            if (!printoutHelp(args, parser)) {
+               parser.parseArgs(args)
+            }
+         } catch (e: ArgParseException) {
+            logger.info(parser.printout(e))
+         }
+      }
+   }
 }
 
 private fun isTest(): Boolean {

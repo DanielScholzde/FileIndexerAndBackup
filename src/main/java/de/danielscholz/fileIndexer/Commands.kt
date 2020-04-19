@@ -17,5 +17,6 @@ enum class Commands(val command: String) {
    VERIFY_FILES("verify"),
    IMPORT_OLD_DB("importOldDb"),
    CONSOLE("console"),
+   STATUS("status"),
    EXIT("exit")
 }

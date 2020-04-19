@@ -25,7 +25,6 @@ correct it
 
 Future plans:
 - customizable two-way sync between two folders
-- REPL for better interaction
 - Remove backup run (database content and files on backup medium; now, file deletion is a manual step after removing an index run)
 - analyze, how much diskspace is used by a concrete backup run (because of the hardlink feature, all files of all other backup runs have to be considered)
 

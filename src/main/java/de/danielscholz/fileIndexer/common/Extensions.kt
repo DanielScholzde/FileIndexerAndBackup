@@ -77,3 +77,17 @@ inline fun <T> Iterable<T>.sumBy(selector: (T) -> Long): Long {
    }
    return sum
 }
+
+/**
+ * Returns `true` if at least one element matches the given [predicate].
+ */
+inline fun <T> Array<out T>.anyIndexed(predicate: (Int, T) -> Boolean): Boolean {
+   var i = 0
+   for (element in this) {
+      if (predicate(i, element)) {
+         return true
+      }
+      i++
+   }
+   return false
+}

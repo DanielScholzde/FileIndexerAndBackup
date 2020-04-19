@@ -15,6 +15,14 @@ class ShowHelpTest : BaseTest() {
    }
 
    @Test
+   fun test2() {
+      val systemOut = captureSystemOut {
+         main(arrayOf("index", "?"))
+      }
+      Assert.assertThat(systemOut, Matchers.containsString("All supported parameters are:"))
+   }
+
+   @Test
    fun testFallback1() {
       val systemOut = captureSystemOut {
          main(arrayOf("/?"))
