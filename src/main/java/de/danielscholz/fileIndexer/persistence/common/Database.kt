@@ -49,8 +49,8 @@ class Database(val dbFile: String) : Closeable {
                   setParams(prepStmt, params)
                   val count = prepStmt.executeUpdate()
 
-                  if (changes++ > Config.maxTransactionSize
-                      || (System.currentTimeMillis() - lastTransactionCommitMillis) / 1000 > Config.maxTransactionDurationSec) {
+                  if (changes++ > Config.INST.maxTransactionSize
+                      || (System.currentTimeMillis() - lastTransactionCommitMillis) / 1000 > Config.INST.maxTransactionDurationSec) {
                      commit()
                   }
 

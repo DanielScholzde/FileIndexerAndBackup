@@ -30,7 +30,7 @@ class FindFilesWithNoCopy(private val pl: PersistenceLayer) {
          filesToSearchIn.subtract(filesReference, HASH + FILE_SIZE, true)
       }
 
-      if (Config.verbose) {
+      if (Config.INST.verbose) {
          if (reverse) {
             logger.info("In the directory $referenceDir there are no copies of the following files from the other directories:")
          } else {
@@ -42,7 +42,7 @@ class FindFilesWithNoCopy(private val pl: PersistenceLayer) {
       result
          .sortedBy { fileLocation -> fileLocation.getFullFilePath() }
          .forEach {
-            if (Config.verbose) {
+            if (Config.INST.verbose) {
                logger.info(it.getMediumDescrFullFilePathAndOtherData())
             } else {
                logger.info(it.getFullFilePath())
@@ -50,7 +50,7 @@ class FindFilesWithNoCopy(private val pl: PersistenceLayer) {
             count.incrementAndGet()
          }
 
-      if (Config.verbose) {
+      if (Config.INST.verbose) {
          logger.info("${count.get()} results")
       }
    }

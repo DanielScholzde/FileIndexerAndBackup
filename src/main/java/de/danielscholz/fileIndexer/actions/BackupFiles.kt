@@ -92,7 +92,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
       val now = Instant.now()
       val targetSubDir = File("$targetDir/${now.ignoreMillis().convertToLocalZone().toStrFilename()}").canonicalFile
 
-      if (!Config.dryRun) {
+      if (!Config.INST.dryRun) {
          if (targetSubDir.isDirectory) throw Exception("Backup directory $targetSubDir already exists!")
          Files.createDirectories(targetSubDir.toPath())
       }
@@ -117,12 +117,12 @@ class BackupFiles(private val pl: PersistenceLayer) {
                                        now,
                                        false,
                                        true,
-                                       if (Config.createHashOnlyForFirstMb) 1 else null,
+                                       if (Config.INST.createHashOnlyForFirstMb) 1 else null,
                                        Files.getFileStore(targetDir.toPath()).totalSpace,
                                        -1, // updated after backup completed
                                        true) // set to false after backup completed without failure
 
-         if (!Config.dryRun) {
+         if (!Config.INST.dryRun) {
             pl.insertIntoIndexRun(indexRunTarget)
          }
 
@@ -169,7 +169,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
             it.action()
          }
 
-         if (!Config.dryRun) {
+         if (!Config.INST.dryRun) {
             indexRunTarget.failureOccurred = false
             indexRunTarget.usableSpace = Files.getFileStore(targetDir.toPath()).usableSpace
             pl.updateIndexRun(indexRunTarget)
@@ -267,14 +267,14 @@ class BackupFiles(private val pl: PersistenceLayer) {
                   "Deleted files:         ${leftPad(deletedFiles.size, maxLength)} (${deletedFiles.fileSize().formatAsFileSize()})\n" +
                   "Total (excl. deleted): ${leftPad(sourceFiles.size, maxLength)} (${sourceFiles.fileSize().formatAsFileSize()})\n")
 
-      if (usableSpace - diskspaceNeeded < totalSpace / 100 * Config.minDiskFreeSpacePercent
-          || usableSpace - diskspaceNeeded < Config.minDiskFreeSpaceMB * 1024L * 1024) {
+      if (usableSpace - diskspaceNeeded < totalSpace / 100 * Config.INST.minDiskFreeSpacePercent
+          || usableSpace - diskspaceNeeded < Config.INST.minDiskFreeSpaceMB * 1024L * 1024) {
 
          val msg = "Not enough free space on the target medium available.\n" +
                    "Required is ${diskspaceNeeded.formatAsFileSize()}, but only ${usableSpace.formatAsFileSize()} is available.\n" +
                    "Backup process is not started."
 
-         if (Config.silent) {
+         if (Config.INST.silent) {
             logger.error(msg)
             return false
          }
@@ -282,11 +282,11 @@ class BackupFiles(private val pl: PersistenceLayer) {
          return false
       }
 
-      if (Config.silent) return true
+      if (Config.INST.silent) return true
 
       val changedPercent = if (totalNumberOfFiles > 0) changedNumberOfFiles * 100 / totalNumberOfFiles else 0
-      if (changedPercent >= Config.maxChangedFilesWarningPercent
-          && changedNumberOfFiles > Config.minAllowedChanges) {
+      if (changedPercent >= Config.INST.maxChangedFilesWarningPercent
+          && changedNumberOfFiles > Config.INST.minAllowedChanges) {
          val dialogResult = JOptionPane.showConfirmDialog(
                null,
                "More files were changed or deleted than allowed\n" +
@@ -325,7 +325,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
       val newBackupFile = File(sourceFileLocation.getFullFilePathForTarget(indexRunTarget))
       val sourceFile = File(sourceFileLocation.getFullFilePath())
 
-      if (!Config.dryRun) {
+      if (!Config.INST.dryRun) {
          newBackupFile.parentFile.mkdirs()
          Files.copy(sourceFile.toPath(), newBackupFile.toPath(), StandardCopyOption.COPY_ATTRIBUTES)
          logger.trace("copy: $sourceFile --> $newBackupFile")
@@ -347,7 +347,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
                                       indexRun,
                                       sourceFileLocation.fileContent)
 
-      if (!Config.dryRun) {
+      if (!Config.INST.dryRun) {
          return pl.insertIntoFileLocation(fileLocation)
       } else {
          return fileLocation
@@ -363,7 +363,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
       val newBackupFile = File(sourceFileLocation.getFullFilePathForTarget(indexRunTarget))
       val existingBackupFile = File(existingBackupFileLocation.getFullFilePath())
 
-      if (!Config.dryRun) {
+      if (!Config.INST.dryRun) {
          newBackupFile.parentFile.mkdirs()
          Files.createLink(newBackupFile.toPath(), existingBackupFile.toPath())
          logger.trace("link: $existingBackupFile --> $newBackupFile")

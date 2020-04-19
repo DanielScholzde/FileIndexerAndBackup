@@ -43,7 +43,7 @@ class CorrectDiffInFileModificationDateAndExifDateTaken(private val pl: Persiste
 
       val filtered = filesReference.filter { checkModifiedIsDifferent(it) }
 
-      if (Config.verbose) {
+      if (Config.INST.verbose) {
          logger.info("The $referenceDir directory contains the following files with a modification date other than the recording date (info from EXIF header):")
       }
 
@@ -58,7 +58,7 @@ class CorrectDiffInFileModificationDateAndExifDateTaken(private val pl: Persiste
                if (file.exists()) {
                   val millisec = imgExifOriginalDate.toEpochMilli()
                   if (file.lastModified() != millisec) {
-                     if (Config.dryRun || file.setLastModified(millisec)) {
+                     if (Config.INST.dryRun || file.setLastModified(millisec)) {
                         str = " (date/time corrected)"
                      } else {
                         str = " (modification date could not be changed)"
@@ -71,7 +71,7 @@ class CorrectDiffInFileModificationDateAndExifDateTaken(private val pl: Persiste
                }
             }
 
-            if (Config.verbose) {
+            if (Config.INST.verbose) {
                logger.info(it.getMediumDescrFullFilePathAndOtherData() + " " + it.modified.convertToLocalZone().toStr() +
                            " <==> " +
                            it.fileContent?.fileMeta?.imgExifOriginalDate?.convertToLocalZone()?.toStr() + str)
@@ -83,7 +83,7 @@ class CorrectDiffInFileModificationDateAndExifDateTaken(private val pl: Persiste
             count.incrementAndGet()
          }
 
-      if (Config.verbose) {
+      if (Config.INST.verbose) {
          logger.info("${count.get()} results")
       }
    }

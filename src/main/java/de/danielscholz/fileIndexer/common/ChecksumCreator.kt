@@ -66,7 +66,7 @@ class ChecksumCreator(private val inputStreamWrapper: InputStreamWrapper,
    }
 
    fun calcChecksum(): Checksum {
-      if (!Config.createHashOnlyForFirstMb) {
+      if (!Config.INST.createHashOnlyForFirstMb) {
          calc(false)
       }
 

@@ -1,6 +1,11 @@
 package de.danielscholz.fileIndexer
 
-object Config {
+class Config {
+
+   companion object {
+      @Volatile
+      var INST = Config()
+   }
 
    /**
     * Part of filename (without path). To exclude files by extension, use: ".jpg/"

@@ -1,6 +1,7 @@
 package de.danielscholz.fileIndexer.common
 
 import com.google.common.collect.*
+import de.danielscholz.fileIndexer.Config
 import de.danielscholz.fileIndexer.Global
 import de.danielscholz.fileIndexer.persistence.FileLocation
 import de.danielscholz.fileIndexer.persistence.common.Database
@@ -12,6 +13,8 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.reflect.KMutableProperty
+import kotlin.reflect.full.declaredMemberProperties
 
 fun parseCmd(arg: String): List<String> {
    val result = mutableListOf<String>()
@@ -256,4 +259,21 @@ fun getVolumeSerialNr(dir: File, mediumSerialParam: String?): String {
       }
    }
    return mediumSerialDetermined
+}
+
+fun Config.getCopy(): Config {
+   val config = Config()
+   val map = mutableMapOf<String, Any?>()
+   for (declaredMemberProperty in this::class.declaredMemberProperties) {
+      val obj = declaredMemberProperty.getter.call(this)
+      map[declaredMemberProperty.name] = obj
+   }
+   for (declaredMemberProperty in config::class.declaredMemberProperties) {
+      if (declaredMemberProperty is KMutableProperty<*>) {
+         if (!map.containsKey(declaredMemberProperty.name)) throw java.lang.IllegalStateException()
+         val obj = map[declaredMemberProperty.name]
+         declaredMemberProperty.setter.call(config, obj)
+      } // else throw IllegalStateException("${declaredMemberProperty.name} is not writeable")
+   }
+   return config
 }

@@ -192,7 +192,7 @@ open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
             }
          }
       }
-      if (Config.verbose) {
+      if (Config.INST.verbose) {
          logger.info("Found ${result.size} index runs for path $dir (single result requested: $singleResult)")
       }
       return result

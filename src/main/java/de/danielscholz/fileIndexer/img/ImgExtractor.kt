@@ -5,7 +5,7 @@ package de.danielscholz.fileIndexer.img
 //   fun extract(fromImg: File, toImg: File): Boolean {
 //
 //      try {
-//         val file = File(Config.exifToolPath + "exiftool.exe").canonicalFile
+//         val file = File(Config.INST.exifToolPath + "exiftool.exe").canonicalFile
 //         val builder = ProcessBuilder(file.toString(), "-b", "-PreviewImage", fromImg.canonicalPath)
 //         val process = builder.start()
 //

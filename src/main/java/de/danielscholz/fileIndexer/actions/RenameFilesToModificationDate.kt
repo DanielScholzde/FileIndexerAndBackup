@@ -30,7 +30,7 @@ class RenameFilesToModificationDate(private val pl: PersistenceLayer) {
          it.fileContent?.fileMeta?.imgExifOriginalDate != null && it.filename != createFilename && !it.filename.contains(createFilename)
       }
 
-      if (Config.verbose) {
+      if (Config.INST.verbose) {
          logger.info("The directory $dirs contains the following files with a different file name than the modification date:")
       }
 
@@ -45,7 +45,7 @@ class RenameFilesToModificationDate(private val pl: PersistenceLayer) {
                if (file.lastModified() == it.modified.toEpochMilli()) {
                   val createNotExistingFile = createNotExistingFile(file, newFilename)
                   newFilename = createNotExistingFile.name
-                  if (Config.dryRun || file.renameTo(createNotExistingFile)) {
+                  if (Config.INST.dryRun || file.renameTo(createNotExistingFile)) {
                      str = " (filename changed)"
                   } else {
                      str = " (filename could not be changed)"
@@ -57,7 +57,7 @@ class RenameFilesToModificationDate(private val pl: PersistenceLayer) {
                str = " (file not found)"
             }
 
-            if (Config.verbose) {
+            if (Config.INST.verbose) {
                logger.info(it.getMediumDescrFullFilePathAndOtherData() + " " + it.modified.convertToLocalZone().toStr() +
                            " <==> " +
                            newFilename + str)
@@ -69,7 +69,7 @@ class RenameFilesToModificationDate(private val pl: PersistenceLayer) {
             count.incrementAndGet()
          }
 
-      if (Config.verbose) {
+      if (Config.INST.verbose) {
          logger.info("${count.get()} results")
       }
    }

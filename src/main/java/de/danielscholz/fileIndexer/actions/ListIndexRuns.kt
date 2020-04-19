@@ -24,7 +24,7 @@ class ListIndexRuns(private val pl: PersistenceLayer) {
          list.forEach {
             logger.info(format(it.indexRun, maxIdStrLength))
          }
-         if (Config.verbose && list.isEmpty()) {
+         if (Config.INST.verbose && list.isEmpty()) {
             logger.info("The directory $dir has no indexed files")
          }
       }
@@ -38,8 +38,8 @@ class ListIndexRuns(private val pl: PersistenceLayer) {
 
       val excludedPaths = ArrayList(indexRun.excludedPaths.split("|").filter { it.isNotEmpty() })
       val excludedFiles = ArrayList(indexRun.excludedFiles.split("|").filter { it.isNotEmpty() })
-      excludedPaths.removeAll(Config.defaultExcludedPaths)
-      excludedFiles.removeAll(Config.defaultExcludedFiles)
+      excludedPaths.removeAll(Config.INST.defaultExcludedPaths)
+      excludedFiles.removeAll(Config.INST.defaultExcludedFiles)
 
       var str = ""
       str += (excludedPaths.isNotEmpty()).ifTrue(", excl. paths: $excludedPaths", "")

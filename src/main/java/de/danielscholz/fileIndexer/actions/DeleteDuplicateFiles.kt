@@ -111,9 +111,9 @@ class DeleteDuplicateFiles(private val pl: PersistenceLayer) {
                      fileExists = false
                      throw IOException() // workaround
                   }
-                  if (!Config.dryRun) {
+                  if (!Config.INST.dryRun) {
                      if (deleteConfirmationExists == null) {
-                        if (Config.silent) {
+                        if (Config.INST.silent) {
                            deleteConfirmationExists = true
                         } else {
                            deleteConfirmationExists = JOptionPane.showConfirmDialog(
@@ -148,7 +148,7 @@ class DeleteDuplicateFiles(private val pl: PersistenceLayer) {
       }
 
       var deletedPaths = 0
-      if (!Config.dryRun) {
+      if (!Config.INST.dryRun) {
          // the most deepest directories should be deleted at first
          // to achieve this we sort all directories in descending order
          for (dir in pathsWithDeletedFiles.sortedByDescending { it.path }) {

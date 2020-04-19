@@ -29,7 +29,7 @@ class CorrectDiffInFileModificationDate(private val pl: PersistenceLayer) {
       val result = filesReference.intersect(filesToSearchIn, HASH + FILE_SIZE + FILENAME, true)
          .filter(if (ignoreMilliseconds) ResultFilter.MODIFIED_SEC_NEQ else ResultFilter.MODIFIED_MILLIS_NEQ)
 
-      if (Config.verbose) {
+      if (Config.INST.verbose) {
          logger.info("The reference directory $referenceDir contains the following files with a different modification date than in the other directories:")
       }
 
@@ -38,7 +38,7 @@ class CorrectDiffInFileModificationDate(private val pl: PersistenceLayer) {
          .sortedBy { fileLocationPair -> fileLocationPair.first.getFullFilePath() }
          .forEach {
             var corrected = false
-            if (!Config.dryRun) {
+            if (!Config.INST.dryRun) {
                val file = File(it.second.getFullFilePath())
                val millisec = it.first.modified.toEpochMilli()
                if (file.lastModified() != millisec) {
@@ -49,7 +49,7 @@ class CorrectDiffInFileModificationDate(private val pl: PersistenceLayer) {
 
             val str = if (corrected) " (date/time corrected)" else ""
 
-            if (Config.verbose) {
+            if (Config.INST.verbose) {
                logger.info(it.first.getMediumDescrFullFilePathAndOtherData() + " " + it.first.modified.convertToLocalZone().toStr() +
                            " <==> " +
                            it.second.getMediumDescrFullFilePathAndOtherData() + it.second.modified.convertToLocalZone().toStr() + str)
@@ -61,7 +61,7 @@ class CorrectDiffInFileModificationDate(private val pl: PersistenceLayer) {
             count.incrementAndGet()
          }
 
-      if (Config.verbose) {
+      if (Config.INST.verbose) {
          logger.info("${count.get()} results")
       }
    }

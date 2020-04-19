@@ -155,7 +155,7 @@ object ImgUtils {
       try {
          val image = ImageIO.read(ByteArrayInputStream(imgContent))
          if (image != null) {
-            val resizedImage = Scalr.resize(image, Scalr.Method.QUALITY, Config.thumbnailSize)
+            val resizedImage = Scalr.resize(image, Scalr.Method.QUALITY, Config.INST.thumbnailSize)
             val file = File(fullPathAndFilename)
             ImageIO.write(resizedImage, "jpeg", file) // writes with quality 85%
             Global.createdFilesCallback(file)

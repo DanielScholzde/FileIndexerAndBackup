@@ -104,9 +104,9 @@ class SyncFiles(private val pl: PersistenceLayer) {
       val totalNumberOfFiles = sourceFiles.union(targetFiles, HASH + FILE_SIZE + REL_PATH2 + FILENAME, true).size
       val numberOfChangedFiles = changedFiles.size + deletedFiles.size
       val changedPercent = if (totalNumberOfFiles > 0) numberOfChangedFiles * 100 / totalNumberOfFiles else 0
-      if (!Config.silent
-          && changedPercent >= Config.maxChangedFilesWarningPercent
-          && numberOfChangedFiles > Config.minAllowedChanges) {
+      if (!Config.INST.silent
+          && changedPercent >= Config.INST.maxChangedFilesWarningPercent
+          && numberOfChangedFiles > Config.INST.minAllowedChanges) {
          val dialogResult = JOptionPane.showConfirmDialog(
                null,
                "More files were changed or deleted than allowed\n" +

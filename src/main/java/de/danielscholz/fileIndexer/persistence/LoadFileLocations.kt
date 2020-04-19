@@ -61,8 +61,8 @@ class LoadFileLocations(private val toProcess: IndexRunFilePathResult, private v
 
       logger.debug("Load indexed Files from ${pl.getFullPath(indexRun, filePath.id)} " +
                    "and Date ${indexRun.runDate.convertToLocalZone().toStr()} " +
-                   "and excluded Paths ${indexRun.excludedPaths.split('|').filter { !Config.defaultExcludedPaths.contains(it) }.joinToString { "\"$it\"" }} " +
-                   "and Files ${indexRun.excludedFiles.split('|').filter { !Config.defaultExcludedFiles.contains(it) }.joinToString { "\"$it\"" }}")
+                   "and excluded Paths ${indexRun.excludedPaths.split('|').filter { !Config.INST.defaultExcludedPaths.contains(it) }.joinToString { "\"$it\"" }} " +
+                   "and Files ${indexRun.excludedFiles.split('|').filter { !Config.INST.defaultExcludedFiles.contains(it) }.joinToString { "\"$it\"" }}")
 
       val sql = """
 			SELECT

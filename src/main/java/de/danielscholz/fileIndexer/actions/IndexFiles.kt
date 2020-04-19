@@ -99,7 +99,7 @@ class IndexFiles(private val dir: File,
                         Instant.now(),
                         false,
                         false,
-                        if (Config.createHashOnlyForFirstMb) 1 else null,
+                        if (Config.INST.createHashOnlyForFirstMb) 1 else null,
                         fileStore.totalSpace,
                         fileStore.usableSpace,
                         true // set to false at the end of a successful index process
@@ -107,7 +107,7 @@ class IndexFiles(private val dir: File,
          )
 
          try {
-            if (!Config.headless) {
+            if (!Config.INST.headless) {
                InfopanelSwing.show()
                stat.startRefresh()
             }
@@ -118,7 +118,7 @@ class IndexFiles(private val dir: File,
             pl.updateIndexRun(indexRun!!)
          } finally {
             pl.clearFilePathCache()
-            if (!Config.headless) {
+            if (!Config.INST.headless) {
                stat.stopRefresh()
                InfopanelSwing.close()
             }
@@ -185,7 +185,7 @@ class IndexFiles(private val dir: File,
             return@runBlocking
          }
 
-         if (Config.allowMultithreading && files.size > 1) {
+         if (Config.INST.allowMultithreading && files.size > 1) {
             testIfCancel(pl.db)
 
             channel = Channel()
@@ -200,7 +200,7 @@ class IndexFiles(private val dir: File,
                channel.close()
             }
 
-            repeat(min(numThreads, Config.maxThreads)) {
+            repeat(min(numThreads, Config.INST.maxThreads)) {
                launch(Dispatchers.Default) {
                   for (fileProcessor in channel) {
                      fileProcessor()
@@ -294,7 +294,7 @@ class IndexFiles(private val dir: File,
                                          archiveRead: Boolean,
                                          alreadyWithinReadSemaphore: Boolean) {
       synchronized(filename, fileSize) {
-         if (Config.verbose) {
+         if (Config.INST.verbose) {
             logger.debug("START process: $filename, file size: $fileSize ${(inArchive.ifTrue("(archive: $archiveName)", ""))}")
          }
 
@@ -346,7 +346,7 @@ class IndexFiles(private val dir: File,
             stat.indexedFilesSizeNoArchive += fileSize
          }
 
-         if (Config.verbose) {
+         if (Config.INST.verbose) {
             logger.debug("END   process: $filename, file size: $fileSize")
          }
       }
@@ -397,7 +397,7 @@ class IndexFiles(private val dir: File,
       }
 
       val extension = filename.getFileExtension()?.toLowerCase()
-      val lazyImgContent = if (extension in Config.imageExtensions && fileSize < 50_000_000) {
+      val lazyImgContent = if (extension in Config.INST.imageExtensions && fileSize < 50_000_000) {
          myLazy { ByteArray(fileSize.toInt()) }
       } else {
          null
@@ -411,11 +411,11 @@ class IndexFiles(private val dir: File,
       }
 
       // if fastMode is active, the calculation of the complete hash may be omitted
-      if (Config.fastMode && !isAlwaysCheckHash(filename)) {
+      if (Config.INST.fastMode && !isAlwaysCheckHash(filename)) {
          for (lastIndexedFileLocation in lastIndexedFileLocationsByKey[Key(fileSize, modified.toEpochMilli())]) {
             if (lastIndexedFileLocation.filename == filename
                 && compareFilePaths(lastIndexedFileLocation, filePath)
-                && (Config.ignoreHashInFastMode
+                && (Config.INST.ignoreHashInFastMode
                     || lastIndexedFileLocation.fileContent!!.hashBegin.startsWith(
                         readSemaphore(filename, fileSize, inArchive, alreadyWithinReadSemaphore) {
                            stat.currentProcessedFile = if (archiveName != null) "$archiveName / $filename" else filename
@@ -465,7 +465,7 @@ class IndexFiles(private val dir: File,
             pl.insertIntoFileMeta(FileMeta(0, pl, fileContent.id, imgAttr.width, imgAttr.height, imgAttr.originalDate))
          }
          //logger.info("$filename: ${imgAttr.width}x${imgAttr.height} ${imgAttr.originalDate?.formatDE()}")
-         if (Config.createThumbnails) {
+         if (Config.INST.createThumbnails) {
             saveThumbnail(extension, lazyImgContent.value, fileContent.id)
          }
       }
@@ -524,7 +524,7 @@ class IndexFiles(private val dir: File,
 
    private fun saveThumbnail(ext: String?, imgContent: ByteArray, fileContentId: Long) {
       val thumbnail: ByteArray?
-      if (ext in Config.rawImagesExtensions) {
+      if (ext in Config.INST.rawImagesExtensions) {
          thumbnail = extractThumbnail(imgContent)
       } else {
          thumbnail = imgContent
@@ -613,9 +613,9 @@ class IndexFiles(private val dir: File,
       processFileStream(filePath, filename, myLazy { stream }, modified, modified, entry.size, false, true, archive.name, true, true)
    }
 
-   private fun isAlwaysCheckHash(filename: String): Boolean = Config.alwaysCheckHashOnIndexForFilesSuffix.any { filename.endsWith(it) }
+   private fun isAlwaysCheckHash(filename: String): Boolean = Config.INST.alwaysCheckHashOnIndexForFilesSuffix.any { filename.endsWith(it) }
 
-   private fun isArchiveToProcess(file: File) = indexArchiveContents && file.extension.toLowerCase() in Config.archiveExtensions
+   private fun isArchiveToProcess(file: File) = indexArchiveContents && file.extension.toLowerCase() in Config.INST.archiveExtensions
 
    private val mutex = Array(42) { Mutex() }
 

@@ -78,12 +78,12 @@ class VerifyFiles(private val pl: PersistenceLayer, private val doPrintln: Boole
                           file: File): Boolean {
       if (fileSize == fileLocation.fileContent!!.fileSize) {
          if (modified == fileLocation.modified) {
-            if (Config.fastMode && Config.ignoreHashInFastMode) {
+            if (Config.INST.fastMode && Config.INST.ignoreHashInFastMode) {
                return true
             }
             FileInputStream(file).tryWith {
                val checksumCreator = ChecksumCreator(InputStreamWrapperImpl(it), fileSize)
-               if (Config.fastMode) {
+               if (Config.INST.fastMode) {
                   val checksumFromBeginTemp = checksumCreator.getChecksumFromBeginTemp().joinToString(",")
                   if (fileLocation.fileContent!!.hashBegin.startsWith(checksumFromBeginTemp)) {
                      return true

@@ -46,7 +46,7 @@ fun readDir(dir: File, caseSensitive: Boolean): FolderResult {
 private fun isExcludedFile(fileEntry: File, caseSensitive: Boolean, stats: Excluded?): Boolean {
    val name = '/' + fileEntry.name + "/"
 
-   for (excludedFile in Config.excludedFiles.iterator() + Config.defaultExcludedFiles.iterator()) {
+   for (excludedFile in Config.INST.excludedFiles.iterator() + Config.INST.defaultExcludedFiles.iterator()) {
       if (name.contains(excludedFile, !caseSensitive)) {
          stats?.excludedFilesUsed?.add(excludedFile)
          return true
@@ -59,7 +59,7 @@ private fun isExcludedDir(fileEntry: File, caseSensitive: Boolean, stats: Exclud
    val path = fileEntry.canonicalPath.replace('\\', '/').ensureSuffix("/")
    val pathWithoutPrefix = myLazy { calcPathWithoutPrefix(fileEntry.canonicalFile) }
 
-   for (excludedPath in Config.excludedPaths.iterator() + Config.defaultExcludedPaths.iterator()) {
+   for (excludedPath in Config.INST.excludedPaths.iterator() + Config.INST.defaultExcludedPaths.iterator()) {
       if (excludedPath.startsWith("//")) {
          if (pathWithoutPrefix.value.startsWith(excludedPath.substring(1), !caseSensitive)) {
             stats?.excludedPathsUsed?.add(excludedPath)
@@ -112,7 +112,7 @@ suspend fun readAllDirInfos(dir: File, scanArchiveContents: Boolean): DirInfosRe
 
                if (!isExcludedFile(fileEntry, result.caseSensitive, result.excluded)) {
                   var archiveRead = false
-                  if (scanArchiveContents && fileEntry.extension.toLowerCase() in Config.archiveExtensions) {
+                  if (scanArchiveContents && fileEntry.extension.toLowerCase() in Config.INST.archiveExtensions) {
                      archiveRead = processArchive(
                            fileEntry,
                            { _, archiveEntry ->
@@ -137,8 +137,8 @@ suspend fun readAllDirInfos(dir: File, scanArchiveContents: Boolean): DirInfosRe
    }
 
    logger.info("Read all files of directory (incl. subdirectories): $dir " + "[excluded " +
-               "paths: ${Config.excludedPaths.filter { !Config.defaultExcludedPaths.contains(it) }.joinToString { "\"$it\"" }} " +
-               "files: ${Config.excludedFiles.filter { !Config.defaultExcludedFiles.contains(it) }.joinToString { "\"$it\"" }}" +
+               "paths: ${Config.INST.excludedPaths.filter { !Config.INST.defaultExcludedPaths.contains(it) }.joinToString { "\"$it\"" }} " +
+               "files: ${Config.INST.excludedFiles.filter { !Config.INST.defaultExcludedFiles.contains(it) }.joinToString { "\"$it\"" }}" +
                "]")
 
    readDirIntern(dir)

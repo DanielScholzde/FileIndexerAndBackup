@@ -25,13 +25,13 @@ class CompareIndexRuns(private val pl: PersistenceLayer) {
       val diff2 = files2.subtract(files1, REL_PATH2 + FILENAME + HASH + FILE_SIZE, false)
       val diff = diff1 + diff2 // todo plus operator is intermediate
 
-      if (Config.verbose) {
+      if (Config.INST.verbose) {
          logger.info("There are the following differences:")
       }
 
       val count = AtomicInteger()
       diff.forEach {
-         if (Config.verbose) {
+         if (Config.INST.verbose) {
             logger.info(it.getMediumDescrFullFilePathAndOtherData())
          } else {
             logger.info(it.getFullFilePath())
@@ -39,7 +39,7 @@ class CompareIndexRuns(private val pl: PersistenceLayer) {
          count.incrementAndGet()
       }
 
-      if (Config.verbose) {
+      if (Config.INST.verbose) {
          logger.info("${count.get()} results")
       }
    }

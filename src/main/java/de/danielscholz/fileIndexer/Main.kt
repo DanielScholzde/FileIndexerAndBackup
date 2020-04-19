@@ -50,7 +50,7 @@ internal fun main(args: Array<String>, runBefore: (PersistenceLayer) -> Unit = {
          }
       }
 
-      if (Config.verbose) logger.debug("Database: ${globalParams.db}")
+      if (Config.INST.verbose) logger.debug("Database: ${globalParams.db}")
       Database(globalParams.db.toString()).tryWith { db ->
          val pl = PersistenceLayer(db)
          if (pl.db.dbQueryUniqueStr("PRAGMA integrity_check").toLowerCase() != "ok") {
@@ -64,7 +64,7 @@ internal fun main(args: Array<String>, runBefore: (PersistenceLayer) -> Unit = {
          PrepareDb.prepareDB(db) // has its own transaction management
 
          if (db.dbVersion == Global.programVersion) {
-            if (Config.dryRun) {
+            if (Config.INST.dryRun) {
                logger.info("-------- Dry run, no write changes are made to files ---------")
             }
             runBefore(pl)
@@ -100,13 +100,13 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
       if (toplevel) {
          add(globalParams::db, FileParam())
       }
-      add(Config::dryRun, BooleanParam())
-      add(Config::verbose, BooleanParam())
-      add(Config::headless, BooleanParam())
-      add(Config::silent, BooleanParam())
-      add(Config::allowMultithreading, BooleanParam())
-      add(Config::excludedPaths, StringSetParam(mapper = { it.replace('\\', '/') }))
-      add(Config::excludedFiles, StringSetParam(mapper = { it.replace('\\', '/') }))
+      add(Config.INST::dryRun, BooleanParam())
+      add(Config.INST::verbose, BooleanParam())
+      add(Config.INST::headless, BooleanParam())
+      add(Config.INST::silent, BooleanParam())
+      add(Config.INST::allowMultithreading, BooleanParam())
+      add(Config.INST::excludedPaths, StringSetParam(mapper = { it.replace('\\', '/') }))
+      add(Config.INST::excludedFiles, StringSetParam(mapper = { it.replace('\\', '/') }))
 
       if (toplevel) {
          addActionParser(Commands.CONSOLE.command) {
@@ -124,11 +124,11 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
       addActionParser(
             Commands.INDEX_FILES.command,
             ArgParserBuilder(IndexFilesParams()).buildWith {
-               add(Config::fastMode, BooleanParam())
-               add(Config::ignoreHashInFastMode, BooleanParam())
-               add(Config::createHashOnlyForFirstMb, BooleanParam())
-               add(Config::createThumbnails, BooleanParam())
-               add(Config::alwaysCheckHashOnIndexForFilesSuffix, StringSetParam())
+               add(Config.INST::fastMode, BooleanParam())
+               add(Config.INST::ignoreHashInFastMode, BooleanParam())
+               add(Config.INST::createHashOnlyForFirstMb, BooleanParam())
+               add(Config.INST::createThumbnails, BooleanParam())
+               add(Config.INST::alwaysCheckHashOnIndexForFilesSuffix, StringSetParam())
                add(paramValues::mediumDescription, StringParam())
                add(paramValues::mediumSerial, StringParam())
                add(paramValues::timeZone, StringParam())
@@ -139,7 +139,7 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
             }) {
          val timeZone = if (paramValues.timeZone != null) TimeZone.getTimeZone(paramValues.timeZone) else null
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
-            if (!Config.headless) InfopanelSwing.show()
+            if (!Config.INST.headless) InfopanelSwing.show()
             try {
                for (dir in paramValues.dirs) {
                   IndexFiles(dir.canonicalFile,
@@ -163,13 +163,13 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
       addActionParser(
             Commands.SYNC_FILES.command,
             ArgParserBuilder(SyncFilesParams()).buildWith {
-               add(Config::fastMode, BooleanParam())
-               add(Config::ignoreHashInFastMode, BooleanParam())
-               add(Config::createHashOnlyForFirstMb, BooleanParam())
-               add(Config::createThumbnails, BooleanParam())
-               add(Config::alwaysCheckHashOnIndexForFilesSuffix, StringSetParam())
-               add(Config::minDiskFreeSpacePercent, IntParam())
-               add(Config::minDiskFreeSpaceMB, IntParam())
+               add(Config.INST::fastMode, BooleanParam())
+               add(Config.INST::ignoreHashInFastMode, BooleanParam())
+               add(Config.INST::createHashOnlyForFirstMb, BooleanParam())
+               add(Config.INST::createThumbnails, BooleanParam())
+               add(Config.INST::alwaysCheckHashOnIndexForFilesSuffix, StringSetParam())
+               add(Config.INST::minDiskFreeSpacePercent, IntParam())
+               add(Config.INST::minDiskFreeSpaceMB, IntParam())
                add(paramValues::mediumDescriptionSource, StringParam())
                add(paramValues::mediumDescriptionTarget, StringParam())
                add(paramValues::mediumSerialSource, StringParam())
@@ -199,15 +199,15 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
       addActionParser(
             Commands.BACKUP_FILES.command,
             ArgParserBuilder(BackupFilesParams()).buildWith {
-               add(Config::fastMode, BooleanParam())
-               add(Config::ignoreHashInFastMode, BooleanParam())
-               add(Config::createHashOnlyForFirstMb, BooleanParam())
-               add(Config::maxChangedFilesWarningPercent, IntParam())
-               add(Config::minAllowedChanges, IntParam())
-               add(Config::createThumbnails, BooleanParam())
-               add(Config::alwaysCheckHashOnIndexForFilesSuffix, StringSetParam())
-               add(Config::minDiskFreeSpacePercent, IntParam())
-               add(Config::minDiskFreeSpaceMB, IntParam())
+               add(Config.INST::fastMode, BooleanParam())
+               add(Config.INST::ignoreHashInFastMode, BooleanParam())
+               add(Config.INST::createHashOnlyForFirstMb, BooleanParam())
+               add(Config.INST::maxChangedFilesWarningPercent, IntParam())
+               add(Config.INST::minAllowedChanges, IntParam())
+               add(Config.INST::createThumbnails, BooleanParam())
+               add(Config.INST::alwaysCheckHashOnIndexForFilesSuffix, StringSetParam())
+               add(Config.INST::minDiskFreeSpacePercent, IntParam())
+               add(Config.INST::minDiskFreeSpaceMB, IntParam())
                add(paramValues::mediumDescriptionSource, StringParam())
                add(paramValues::mediumDescriptionTarget, StringParam())
                add(paramValues::mediumSerialSource, StringParam())
@@ -239,13 +239,13 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
       addActionParser(
             Commands.VERIFY_FILES.command,
             ArgParserBuilder(VerifyFilesParams()).buildWith {
-               add(Config::fastMode, BooleanParam())
-               add(Config::ignoreHashInFastMode, BooleanParam())
+               add(Config.INST::fastMode, BooleanParam())
+               add(Config.INST::ignoreHashInFastMode, BooleanParam())
                addNamelessLast(paramValues::dir, FileParam(checkIsDir = true), "Directory", true)
             },
             "Verify",
             {
-               Config.fastMode = false // nur hier bei Verify per Default den Fastmode ausschalten
+               Config.INST.fastMode = false // nur hier bei Verify per Default den Fastmode ausschalten
             }) {
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
             VerifyFiles(pl, true).run(paramValues.dir!!.canonicalFile)
@@ -403,22 +403,22 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
       }
 
       addActionParser(Commands.STATUS.command) {
-         logger.info("verbose = ${Config.verbose}")
-         logger.info("silent = ${Config.silent}")
-         logger.info("headless = ${Config.headless}")
-         logger.info("dryRun = ${Config.dryRun}")
-         logger.info("fastMode = ${Config.fastMode}")
-         logger.info("ignoreHashInFastMode = ${Config.ignoreHashInFastMode}")
-         logger.info("excludedFiles = ${Config.excludedFiles}")
-         logger.info("excludedPaths = ${Config.excludedPaths}")
-         logger.info("defaultExcludedFiles = ${Config.defaultExcludedFiles}")
-         logger.info("defaultExcludedPaths = ${Config.defaultExcludedPaths}")
-         logger.info("allowMultithreading = ${Config.allowMultithreading}")
-         logger.info("createThumbnails = ${Config.createThumbnails}")
-         logger.info("maxChangedFilesWarningPercent = ${Config.maxChangedFilesWarningPercent}")
-         logger.info("minAllowedChanges = ${Config.minAllowedChanges}")
-         logger.info("minDiskFreeSpacePercent = ${Config.minDiskFreeSpacePercent}")
-         logger.info("minDiskFreeSpaceMB = ${Config.minDiskFreeSpaceMB}")
+         logger.info("verbose = ${Config.INST.verbose}")
+         logger.info("silent = ${Config.INST.silent}")
+         logger.info("headless = ${Config.INST.headless}")
+         logger.info("dryRun = ${Config.INST.dryRun}")
+         logger.info("fastMode = ${Config.INST.fastMode}")
+         logger.info("ignoreHashInFastMode = ${Config.INST.ignoreHashInFastMode}")
+         logger.info("excludedFiles = ${Config.INST.excludedFiles}")
+         logger.info("excludedPaths = ${Config.INST.excludedPaths}")
+         logger.info("defaultExcludedFiles = ${Config.INST.defaultExcludedFiles}")
+         logger.info("defaultExcludedPaths = ${Config.INST.defaultExcludedPaths}")
+         logger.info("allowMultithreading = ${Config.INST.allowMultithreading}")
+         logger.info("createThumbnails = ${Config.INST.createThumbnails}")
+         logger.info("maxChangedFilesWarningPercent = ${Config.INST.maxChangedFilesWarningPercent}")
+         logger.info("minAllowedChanges = ${Config.INST.minAllowedChanges}")
+         logger.info("minDiskFreeSpacePercent = ${Config.INST.minDiskFreeSpacePercent}")
+         logger.info("minDiskFreeSpaceMB = ${Config.INST.minDiskFreeSpaceMB}")
       }
 
       if (!toplevel) {
@@ -457,20 +457,28 @@ private fun processConsoleInputs(console: Console, pl: PersistenceLayer) {
       if (arguments.isEmpty()) {
          continue
       } else {
+         var commandProcessed = false
          val parser = createParser(false) { globalParams: GlobalParams, command: (PersistenceLayer) -> Unit ->
             try {
                command(pl)
+               commandProcessed = true
             } catch (e: Exception) {
                e.printStackTrace()
                pl.db.rollback()
-            } finally {
-               // todo
             }
          }
          try {
             val args = arguments.toTypedArray()
             if (!printoutHelp(args, parser)) {
+               val configCopy = Config.INST.getCopy()
+
                parser.parseArgs(args)
+
+               // restore settings if a command like "index", "sync" was processed
+               // if only settings were changed (not in combination with a command), keep them
+               if (commandProcessed) {
+                  Config.INST = configCopy
+               }
             }
          } catch (e: ArgParseException) {
             logger.info(parser.printout(e))
