@@ -30,7 +30,7 @@ Future plans:
 
 Technical information:
 - 100% written in Kotlin
-- small code size: less than 2k lines of code!
+- small code size: less than 5k lines of code!
 - integrated SQLite database
 - integrated own tiny entity to relational database mapper (only 250 lines of code)
 - use of own small program argument parser (separate project)
@@ -43,4 +43,14 @@ customizable identity definition
 
 Examples:
 
-    java -jar FileIndexerAndBackup.jar  backup --db backupIndex.db  /my/sourcePath  /my/backup/targetPath
+    java -jar FileIndexerAndBackup.jar backup --db backupIndex.db /my/sourcePath /my/backup/targetPath
+    
+Integrated console:
+
+    java -jar FileIndexerAndBackup.jar console --db backupIndex.db
+    > --dryRun --verbose
+    dryRun = true
+    verbose = true
+    > backupIndex.db /my/sourcePath /my/backup/targetPath
+    ...
+    > exit
