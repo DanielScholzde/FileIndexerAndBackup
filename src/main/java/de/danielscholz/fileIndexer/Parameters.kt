@@ -1,9 +1,11 @@
 package de.danielscholz.fileIndexer
 
 import java.io.File
+import java.util.*
 
 class GlobalParams {
    var db: File? = null
+   var timeZone: TimeZone? = TimeZone.getDefault()
 }
 
 class IndexFilesParams {
@@ -11,7 +13,6 @@ class IndexFilesParams {
    var lastIndexDir: File? = null
    var mediumDescription: String? = null
    var mediumSerial: String? = null
-   var timeZone: String? = null
    var noArchiveContents: Boolean = false
    var updateHardlinksInLastIndex: Boolean = false
 }
@@ -23,7 +24,6 @@ class SyncFilesParams {
    var mediumDescriptionTarget: String? = null
    var mediumSerialSource: String? = null
    var mediumSerialTarget: String? = null
-   var timeZone: String? = null
    var skipIndexFilesOfSourceDir: Boolean = false
 }
 
@@ -34,7 +34,6 @@ class BackupFilesParams {
    var mediumDescriptionTarget: String? = null
    var mediumSerialSource: String? = null
    var mediumSerialTarget: String? = null
-   var timeZone: String? = null
    var skipIndexFilesOfSourceDir = false
    var indexArchiveContentsOfSourceDir = false
 }

@@ -277,3 +277,20 @@ fun Config.getCopy(): Config {
    }
    return config
 }
+
+fun Config.getDiffTo(config: Config): List<Pair<String, Any?>> {
+   val map = mutableMapOf<String, Any?>()
+   for (declaredMemberProperty in this::class.declaredMemberProperties) {
+      val obj = declaredMemberProperty.getter.call(this)
+      map[declaredMemberProperty.name] = obj
+   }
+   val result = mutableListOf<Pair<String, Any?>>()
+   for (declaredMemberProperty in config::class.declaredMemberProperties) {
+      val obj1 = map[declaredMemberProperty.name]
+      val obj2 = declaredMemberProperty.getter.call(config)
+      if (obj1 != obj2) {
+         result.add(declaredMemberProperty.name to obj1)
+      }
+   }
+   return result
+}

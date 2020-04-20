@@ -16,7 +16,6 @@ import de.danielscholz.kargparser.parser.*
 import org.slf4j.LoggerFactory
 import java.io.Console
 import java.io.File
-import java.util.*
 
 /**
  * Information about this program can be found in README.md
@@ -107,6 +106,7 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
       add(Config.INST::allowMultithreading, BooleanParam())
       add(Config.INST::excludedPaths, StringSetParam(mapper = { it.replace('\\', '/') }))
       add(Config.INST::excludedFiles, StringSetParam(mapper = { it.replace('\\', '/') }))
+      add(globalParams::timeZone, TimeZoneParam())
 
       if (toplevel) {
          addActionParser(Commands.CONSOLE.command) {
@@ -131,13 +131,11 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
                add(Config.INST::alwaysCheckHashOnIndexForFilesSuffix, StringSetParam())
                add(paramValues::mediumDescription, StringParam())
                add(paramValues::mediumSerial, StringParam())
-               add(paramValues::timeZone, StringParam())
                add(paramValues::noArchiveContents, BooleanParam())
                add(paramValues::updateHardlinksInLastIndex, BooleanParam())
                add(paramValues::lastIndexDir, FileParam(true))
                addNamelessLast(paramValues::dirs, FileListParam(1..10, true), "Directories to index", true)
             }) {
-         val timeZone = if (paramValues.timeZone != null) TimeZone.getTimeZone(paramValues.timeZone) else null
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
             if (!Config.INST.headless) InfopanelSwing.show()
             try {
@@ -146,7 +144,7 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
                              paramValues.lastIndexDir?.canonicalFile,
                              paramValues.mediumDescription,
                              paramValues.mediumSerial,
-                             timeZone,
+                             globalParams.timeZone,
                              !paramValues.noArchiveContents,
                              paramValues.updateHardlinksInLastIndex,
                              1,
@@ -174,12 +172,10 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
                add(paramValues::mediumDescriptionTarget, StringParam())
                add(paramValues::mediumSerialSource, StringParam())
                add(paramValues::mediumSerialTarget, StringParam())
-               add(paramValues::timeZone, StringParam())
                add(paramValues::skipIndexFilesOfSourceDir, BooleanParam())
                addNamelessLast(paramValues::sourceDir, FileParam(checkIsDir = true), "Source directory", true)
                addNamelessLast(paramValues::targetDir, FileParam(checkIsDir = true), "Target directory", true)
             }) {
-         val timeZone = if (paramValues.timeZone != null) TimeZone.getTimeZone(paramValues.timeZone) else null
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
             SyncFiles(pl).run(
                   paramValues.sourceDir!!.canonicalFile,
@@ -189,7 +185,7 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
                   paramValues.mediumSerialSource,
                   paramValues.mediumSerialTarget,
                   paramValues.skipIndexFilesOfSourceDir,
-                  timeZone,
+                  globalParams.timeZone,
                   1,
                   2,
                   500_000)
@@ -212,13 +208,11 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
                add(paramValues::mediumDescriptionTarget, StringParam())
                add(paramValues::mediumSerialSource, StringParam())
                add(paramValues::mediumSerialTarget, StringParam())
-               add(paramValues::timeZone, StringParam())
                add(paramValues::skipIndexFilesOfSourceDir, BooleanParam())
                add(paramValues::indexArchiveContentsOfSourceDir, BooleanParam())
                addNamelessLast(paramValues::sourceDir, FileParam(checkIsDir = true), "Source directory", true)
                addNamelessLast(paramValues::targetDir, FileParam(checkIsDir = true), "Target directory", true)
             }) {
-         val timeZone = if (paramValues.timeZone != null) TimeZone.getTimeZone(paramValues.timeZone) else null
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
             BackupFiles(pl).run(
                   paramValues.sourceDir!!.canonicalFile,
@@ -229,7 +223,7 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
                   paramValues.mediumSerialTarget,
                   paramValues.indexArchiveContentsOfSourceDir,
                   paramValues.skipIndexFilesOfSourceDir,
-                  timeZone,
+                  globalParams.timeZone,
                   1,
                   2,
                   500_000)
@@ -245,7 +239,7 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
             },
             "Verify",
             {
-               Config.INST.fastMode = false // nur hier bei Verify per Default den Fastmode ausschalten
+               Config.INST.fastMode = false // deactivate fastMode only on verify as default
             }) {
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
             VerifyFiles(pl, true).run(paramValues.dir!!.canonicalFile)
@@ -478,6 +472,11 @@ private fun processConsoleInputs(console: Console, pl: PersistenceLayer) {
                // if only settings were changed (not in combination with a command), keep them
                if (commandProcessed) {
                   Config.INST = configCopy
+               } else {
+                  val changed = Config.INST.getDiffTo(configCopy).map { "${it.first} = ${it.second}" }.joinToString("\n")
+                  if (changed.isNotEmpty()) {
+                     logger.info(changed)
+                  }
                }
             }
          } catch (e: ArgParseException) {
