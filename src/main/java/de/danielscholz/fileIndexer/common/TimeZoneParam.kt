@@ -4,7 +4,7 @@ import de.danielscholz.kargparser.ArgParseException
 import de.danielscholz.kargparser.parser.ParamParserBase
 import java.util.*
 
-class TimeZoneParam : ParamParserBase<TimeZone>() {
+class TimeZoneParam : ParamParserBase<TimeZone, TimeZone?>() {
 
    override var callback: ((TimeZone) -> Unit)? = null
    private var value: TimeZone? = null

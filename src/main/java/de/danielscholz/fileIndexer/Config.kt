@@ -3,6 +3,7 @@ package de.danielscholz.fileIndexer
 class Config {
 
    companion object {
+      /** single instance, can be replaced at runtime */
       @Volatile
       var INST = Config()
    }
@@ -34,9 +35,9 @@ class Config {
    val archiveExtensions = setOf("zip", "tar", "7z", "gz", "rar")
 
    var allowMultithreading = true
-   val maxThreads = 10
+   var maxThreads = 10
    var createThumbnails = false
-   val thumbnailSize = 600
+   var thumbnailSize = 600
 
    /** When creating a new index, files will only be recognized by size, modification date and hash of first MB */
    var fastMode = true

@@ -28,6 +28,7 @@ fun main(args: Array<String>) {
 }
 
 /**
+ * @param args program arguments
  * @param runBefore Action that is called before the main program. Does not take place within a transaction!
  * @param runAfter Action that is called after the main program. Does not take place within a transaction!
  */
@@ -60,14 +61,14 @@ internal fun main(args: Array<String>, runBefore: (PersistenceLayer) -> Unit = {
          db.dbExecNoResult("PRAGMA foreign_keys=ON")
          //db.dbExecNoResult("PRAGMA synchronous=1")
 
-         PrepareDb.prepareDB(db) // has its own transaction management
+         PrepareDb.run(db) // has its own transaction management
 
          if (db.dbVersion == Global.programVersion) {
             if (Config.INST.dryRun) {
                logger.info("-------- Dry run, no write changes are made to files ---------")
             }
             runBefore(pl)
-            command.invoke(pl)
+            command(pl)
             runAfter(pl)
          } else {
             logger.error("The version of the database ${db.dbVersion} does not match the current program version (${Global.programVersion}). Please update the program.")
@@ -78,7 +79,7 @@ internal fun main(args: Array<String>, runBefore: (PersistenceLayer) -> Unit = {
    }
 
    try {
-      if (!printoutHelp(args, parser)) {
+      if (!demandedHelp(args, parser)) {
          parser.parseArgs(args)
       }
    } catch (e: ArgParseException) {
@@ -103,7 +104,6 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
       add(Config.INST::verbose, BooleanParam())
       add(Config.INST::headless, BooleanParam())
       add(Config.INST::silent, BooleanParam())
-      add(Config.INST::allowMultithreading, BooleanParam())
       add(Config.INST::excludedPaths, StringSetParam(mapper = { it.replace('\\', '/') }))
       add(Config.INST::excludedFiles, StringSetParam(mapper = { it.replace('\\', '/') }))
       add(globalParams::timeZone, TimeZoneParam())
@@ -128,7 +128,10 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
                add(Config.INST::ignoreHashInFastMode, BooleanParam())
                add(Config.INST::createHashOnlyForFirstMb, BooleanParam())
                add(Config.INST::createThumbnails, BooleanParam())
+               add(Config.INST::thumbnailSize, IntParam())
                add(Config.INST::alwaysCheckHashOnIndexForFilesSuffix, StringSetParam())
+               add(Config.INST::allowMultithreading, BooleanParam())
+               add(Config.INST::maxThreads, IntParam())
                add(paramValues::mediumDescription, StringParam())
                add(paramValues::mediumSerial, StringParam())
                add(paramValues::noArchiveContents, BooleanParam())
@@ -423,7 +426,7 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
    }
 }
 
-private fun printoutHelp(args: Array<String>, parser: ArgParser<GlobalParams>): Boolean {
+private fun demandedHelp(args: Array<String>, parser: ArgParser<GlobalParams>): Boolean {
    // offer some more options for showing help and to get help for a specific command
    val helpArguments = setOf("/?", "--?", "?", "--help")
    var foundIdx = -1
@@ -463,7 +466,7 @@ private fun processConsoleInputs(console: Console, pl: PersistenceLayer) {
          }
          try {
             val args = arguments.toTypedArray()
-            if (!printoutHelp(args, parser)) {
+            if (!demandedHelp(args, parser)) {
                val configCopy = Config.INST.getCopy()
 
                parser.parseArgs(args)

@@ -8,7 +8,7 @@ object PrepareDb {
 
    private val logger = LoggerFactory.getLogger(this.javaClass)
 
-   fun prepareDB(db: Database) {
+   fun run(db: Database) {
       fun setVersion(version: Int): Int {
          db.dbExec("UPDATE schemeVersion SET version = $version ")
          return version
