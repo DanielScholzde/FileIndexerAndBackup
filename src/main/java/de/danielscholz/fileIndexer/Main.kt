@@ -15,6 +15,8 @@ import de.danielscholz.kargparser.parser.*
 import org.slf4j.LoggerFactory
 import java.io.Console
 import java.io.File
+import java.util.*
+import kotlin.reflect.KProperty0
 
 /**
  * Information about this program can be found in README.md
@@ -106,6 +108,26 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
       add(Config.INST::minAllowedChanges, IntParam())
       add(Config.INST::minDiskFreeSpacePercent, IntParam())
       add(Config.INST::minDiskFreeSpaceMB, IntParam())
+   }
+
+   fun loggerInfo(property: KProperty0<*>) {
+      fun convertSingle(value: Any?): String? {
+         if (value is String) return "\"$value\""
+         if (value is Boolean) return BooleanParam().convertToStr(value)
+         if (value is File) return FileParam().convertToStr(value)
+         if (value is TimeZone) return TimeZoneParam().convertToStr(value)
+         if (value is IntRange) return IntRangeParam().convertToStr(value)
+         if (value is IndexFiles.ReadConfig) return ReadConfigParam().convertToStr(value)
+         return if (value != null) value.toString() else ""
+      }
+
+      var value: Any? = property.get()
+      if (value is Collection<*>) {
+         value = value.joinToString(", ", transform = { convertSingle(it).toString() })
+      } else {
+         value = convertSingle(value)
+      }
+      logger.info("${property.name} = $value")
    }
 
    return ArgParserBuilder(GlobalParams()).buildWith(ArgParserConfig(ignoreCase = true, noPrefixForActionParams = true)) {
@@ -393,22 +415,26 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
       }
 
       addActionParser(Commands.STATUS.command) {
-         logger.info("verbose = ${Config.INST.verbose}")
-         logger.info("confirmations = ${Config.INST.confirmations}")
-         logger.info("progressWindow = ${Config.INST.progressWindow}")
-         logger.info("dryRun = ${Config.INST.dryRun}")
-         logger.info("fastMode = ${Config.INST.fastMode}")
-         logger.info("ignoreHashInFastMode = ${Config.INST.ignoreHashInFastMode}")
-         logger.info("excludedFiles = ${Config.INST.excludedFiles}")
-         logger.info("excludedPaths = ${Config.INST.excludedPaths}")
-         logger.info("defaultExcludedFiles = ${Config.INST.defaultExcludedFiles}")
-         logger.info("defaultExcludedPaths = ${Config.INST.defaultExcludedPaths}")
-         logger.info("allowMultithreading = ${Config.INST.allowMultithreading}")
-         logger.info("createThumbnails = ${Config.INST.createThumbnails}")
-         logger.info("maxChangedFilesWarningPercent = ${Config.INST.maxChangedFilesWarningPercent}")
-         logger.info("minAllowedChanges = ${Config.INST.minAllowedChanges}")
-         logger.info("minDiskFreeSpacePercent = ${Config.INST.minDiskFreeSpacePercent}")
-         logger.info("minDiskFreeSpaceMB = ${Config.INST.minDiskFreeSpaceMB}")
+         loggerInfo(globalParams::db)
+         loggerInfo(globalParams::timeZone)
+         loggerInfo(Config.INST::verbose)
+         loggerInfo(Config.INST::confirmations)
+         loggerInfo(Config.INST::progressWindow)
+         loggerInfo(Config.INST::dryRun)
+         loggerInfo(Config.INST::fastMode)
+         loggerInfo(Config.INST::ignoreHashInFastMode)
+         loggerInfo(Config.INST::alwaysCheckHashOnIndexForFilesSuffix)
+         loggerInfo(Config.INST::excludedFiles)
+         loggerInfo(Config.INST::excludedPaths)
+         loggerInfo(Config.INST::defaultExcludedFiles)
+         loggerInfo(Config.INST::defaultExcludedPaths)
+         loggerInfo(Config.INST::allowMultithreading)
+         loggerInfo(Config.INST::createThumbnails)
+         loggerInfo(Config.INST::thumbnailSize)
+         loggerInfo(Config.INST::maxChangedFilesWarningPercent)
+         loggerInfo(Config.INST::minAllowedChanges)
+         loggerInfo(Config.INST::minDiskFreeSpacePercent)
+         loggerInfo(Config.INST::minDiskFreeSpaceMB)
       }
 
       if (!toplevel) {
