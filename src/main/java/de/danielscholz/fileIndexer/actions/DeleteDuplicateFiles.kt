@@ -113,7 +113,7 @@ class DeleteDuplicateFiles(private val pl: PersistenceLayer) {
                   }
                   if (!Config.INST.dryRun) {
                      if (deleteConfirmationExists == null) {
-                        if (Config.INST.silent) {
+                        if (!Config.INST.confirmations) {
                            deleteConfirmationExists = true
                         } else {
                            deleteConfirmationExists = JOptionPane.showConfirmDialog(

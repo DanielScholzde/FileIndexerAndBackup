@@ -3,7 +3,6 @@ package de.danielscholz.fileIndexer
 import ch.qos.logback.classic.LoggerContext
 import de.danielscholz.fileIndexer.actions.*
 import de.danielscholz.fileIndexer.common.*
-import de.danielscholz.fileIndexer.gui.InfopanelSwing
 import de.danielscholz.fileIndexer.persistence.PersistenceLayer
 import de.danielscholz.fileIndexer.persistence.PrepareDb
 import de.danielscholz.fileIndexer.persistence.Queries
@@ -90,6 +89,25 @@ internal fun main(args: Array<String>, runBefore: (PersistenceLayer) -> Unit = {
 
 @Suppress("DuplicatedCode")
 private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (PersistenceLayer) -> Unit) -> Unit): ArgParser<GlobalParams> {
+
+   fun ArgParserBuilder<*>.addConfigParamsForIndexFiles() {
+      add(Config.INST::fastMode, BooleanParam())
+      add(Config.INST::ignoreHashInFastMode, BooleanParam())
+      add(Config.INST::createHashOnlyForFirstMb, BooleanParam())
+      add(Config.INST::createThumbnails, BooleanParam())
+      add(Config.INST::thumbnailSize, IntParam())
+      add(Config.INST::alwaysCheckHashOnIndexForFilesSuffix, StringSetParam())
+      add(Config.INST::allowMultithreading, BooleanParam())
+      add(Config.INST::maxThreads, IntParam())
+   }
+
+   fun ArgParserBuilder<*>.addConfigParamsForSyncOrBackup() {
+      add(Config.INST::maxChangedFilesWarningPercent, IntParam())
+      add(Config.INST::minAllowedChanges, IntParam())
+      add(Config.INST::minDiskFreeSpacePercent, IntParam())
+      add(Config.INST::minDiskFreeSpaceMB, IntParam())
+   }
+
    return ArgParserBuilder(GlobalParams()).buildWith(ArgParserConfig(ignoreCase = true, noPrefixForActionParams = true)) {
       val globalParams = paramValues
 
@@ -102,8 +120,8 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
       }
       add(Config.INST::dryRun, BooleanParam())
       add(Config.INST::verbose, BooleanParam())
-      add(Config.INST::headless, BooleanParam())
-      add(Config.INST::silent, BooleanParam())
+      add(Config.INST::progressWindow, BooleanParam())
+      add(Config.INST::confirmations, BooleanParam())
       add(Config.INST::excludedPaths, StringSetParam(mapper = { it.replace('\\', '/') }))
       add(Config.INST::excludedFiles, StringSetParam(mapper = { it.replace('\\', '/') }))
       add(globalParams::timeZone, TimeZoneParam())
@@ -124,38 +142,26 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
       addActionParser(
             Commands.INDEX_FILES.command,
             ArgParserBuilder(IndexFilesParams()).buildWith {
-               add(Config.INST::fastMode, BooleanParam())
-               add(Config.INST::ignoreHashInFastMode, BooleanParam())
-               add(Config.INST::createHashOnlyForFirstMb, BooleanParam())
-               add(Config.INST::createThumbnails, BooleanParam())
-               add(Config.INST::thumbnailSize, IntParam())
-               add(Config.INST::alwaysCheckHashOnIndexForFilesSuffix, StringSetParam())
-               add(Config.INST::allowMultithreading, BooleanParam())
-               add(Config.INST::maxThreads, IntParam())
+               addConfigParamsForIndexFiles()
                add(paramValues::mediumDescription, StringParam())
                add(paramValues::mediumSerial, StringParam())
                add(paramValues::noArchiveContents, BooleanParam())
                add(paramValues::updateHardlinksInLastIndex, BooleanParam())
                add(paramValues::lastIndexDir, FileParam())
                add(paramValues::readConfig, ReadConfigParam())
-               addNamelessLast(paramValues::dirs, FileListParam(1..10, true), "Directories to index", true)
+               addNamelessLast(paramValues::dirs, FileListParam(1..10, true), required = true)
             }) {
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
-            if (!Config.INST.headless) InfopanelSwing.show()
-            try {
-               for (dir in paramValues.dirs) {
-                  IndexFiles(dir.canonicalFile,
-                             paramValues.lastIndexDir?.canonicalFile,
-                             paramValues.mediumDescription,
-                             paramValues.mediumSerial,
-                             globalParams.timeZone,
-                             !paramValues.noArchiveContents,
-                             paramValues.updateHardlinksInLastIndex,
-                             paramValues.readConfig,
-                             pl).run()
-               }
-            } finally {
-               InfopanelSwing.close()
+            for (dir in paramValues.dirs) {
+               IndexFiles(dir.canonicalFile,
+                          paramValues.lastIndexDir?.canonicalFile,
+                          paramValues.mediumDescription,
+                          paramValues.mediumSerial,
+                          globalParams.timeZone,
+                          !paramValues.noArchiveContents,
+                          paramValues.updateHardlinksInLastIndex,
+                          paramValues.readConfig,
+                          pl).run()
             }
          }
       }
@@ -163,16 +169,8 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
       addActionParser(
             Commands.SYNC_FILES.command,
             ArgParserBuilder(SyncFilesParams()).buildWith {
-               add(Config.INST::fastMode, BooleanParam())
-               add(Config.INST::ignoreHashInFastMode, BooleanParam())
-               add(Config.INST::createHashOnlyForFirstMb, BooleanParam())
-               add(Config.INST::createThumbnails, BooleanParam())
-               add(Config.INST::thumbnailSize, IntParam())
-               add(Config.INST::alwaysCheckHashOnIndexForFilesSuffix, StringSetParam())
-               add(Config.INST::allowMultithreading, BooleanParam())
-               add(Config.INST::maxThreads, IntParam())
-               add(Config.INST::minDiskFreeSpacePercent, IntParam())
-               add(Config.INST::minDiskFreeSpaceMB, IntParam())
+               addConfigParamsForIndexFiles()
+               addConfigParamsForSyncOrBackup()
                add(paramValues::mediumDescriptionSource, StringParam())
                add(paramValues::mediumDescriptionTarget, StringParam())
                add(paramValues::mediumSerialSource, StringParam())
@@ -180,8 +178,8 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
                add(paramValues::skipIndexFilesOfSourceDir, BooleanParam())
                add(paramValues::sourceReadConfig, ReadConfigParam())
                add(paramValues::targetReadConfig, ReadConfigParam())
-               addNamelessLast(paramValues::sourceDir, FileParam(checkIsDir = true), "Source directory", true)
-               addNamelessLast(paramValues::targetDir, FileParam(checkIsDir = true), "Target directory", true)
+               addNamelessLast(paramValues::sourceDir, FileParam(checkIsDir = true), required = true)
+               addNamelessLast(paramValues::targetDir, FileParam(checkIsDir = true), required = true)
             }) {
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
             SyncFiles(pl).run(
@@ -201,18 +199,8 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
       addActionParser(
             Commands.BACKUP_FILES.command,
             ArgParserBuilder(BackupFilesParams()).buildWith {
-               add(Config.INST::fastMode, BooleanParam())
-               add(Config.INST::ignoreHashInFastMode, BooleanParam())
-               add(Config.INST::createHashOnlyForFirstMb, BooleanParam())
-               add(Config.INST::createThumbnails, BooleanParam())
-               add(Config.INST::thumbnailSize, IntParam())
-               add(Config.INST::maxChangedFilesWarningPercent, IntParam())
-               add(Config.INST::minAllowedChanges, IntParam())
-               add(Config.INST::alwaysCheckHashOnIndexForFilesSuffix, StringSetParam())
-               add(Config.INST::allowMultithreading, BooleanParam())
-               add(Config.INST::maxThreads, IntParam())
-               add(Config.INST::minDiskFreeSpacePercent, IntParam())
-               add(Config.INST::minDiskFreeSpaceMB, IntParam())
+               addConfigParamsForIndexFiles()
+               addConfigParamsForSyncOrBackup()
                add(paramValues::mediumDescriptionSource, StringParam())
                add(paramValues::mediumDescriptionTarget, StringParam())
                add(paramValues::mediumSerialSource, StringParam())
@@ -220,8 +208,8 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
                add(paramValues::skipIndexFilesOfSourceDir, BooleanParam())
                add(paramValues::indexArchiveContentsOfSourceDir, BooleanParam())
                add(paramValues::sourceReadConfig, ReadConfigParam())
-               addNamelessLast(paramValues::sourceDir, FileParam(checkIsDir = true), "Source directory", true)
-               addNamelessLast(paramValues::targetDir, FileParam(checkIsDir = true), "Target directory", true)
+               addNamelessLast(paramValues::sourceDir, FileParam(checkIsDir = true), required = true)
+               addNamelessLast(paramValues::targetDir, FileParam(checkIsDir = true), required = true)
             }) {
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
             BackupFiles(pl).run(
@@ -243,7 +231,7 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
             ArgParserBuilder(VerifyFilesParams()).buildWith {
                add(Config.INST::fastMode, BooleanParam())
                add(Config.INST::ignoreHashInFastMode, BooleanParam())
-               addNamelessLast(paramValues::dir, FileParam(checkIsDir = true), "Directory", true)
+               addNamelessLast(paramValues::dir, FileParam(checkIsDir = true), required = true)
             },
             "Verify",
             {
@@ -257,8 +245,8 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
       addActionParser(
             Commands.COMPARE_INDEX_RUNS.command,
             ArgParserBuilder(CompareIndexRunsParams()).buildWith {
-               addNamelessLast(paramValues::indexNr1, IntParam(), "Directory 1", true)
-               addNamelessLast(paramValues::indexNr2, IntParam(), "Directory 2", true)
+               addNamelessLast(paramValues::indexNr1, IntParam(), required = true)
+               addNamelessLast(paramValues::indexNr2, IntParam(), required = true)
             }) {
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
             CompareIndexRuns(pl).run(paramValues.indexNr1.toLong(), paramValues.indexNr2.toLong())
@@ -272,7 +260,7 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
                add(paramValues::inclFilenameOnCompare, BooleanParam())
                add(paramValues::printOnlyDeleted, BooleanParam())
                add(paramValues::deletePathFilter, StringParam())
-               addNamelessLast(paramValues::dirs, FileListParam(1..Int.MAX_VALUE, true), "Directories", true)
+               addNamelessLast(paramValues::dirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
             DeleteDuplicateFiles(pl).run(
@@ -288,8 +276,8 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
             Commands.FIND_FILES_WITH_NO_COPY.command,
             ArgParserBuilder(FindFilesWithNoCopyParams()).buildWith {
                add(paramValues::reverse, BooleanParam())
-               addNamelessLast(paramValues::referenceDir, FileParam(true), "Reference directory", true)
-               addNamelessLast(paramValues::toSearchInDirs, FileListParam(1..Int.MAX_VALUE, true), "Directories to search in", true)
+               addNamelessLast(paramValues::referenceDir, FileParam(true), required = true)
+               addNamelessLast(paramValues::toSearchInDirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
             FindFilesWithNoCopy(pl).run(
@@ -303,8 +291,8 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
             Commands.CORRECT_DIFF_IN_FILE_MODIFICATION_DATE.command,
             ArgParserBuilder(CorrectDiffInFileModificationDateParams()).buildWith {
                add(paramValues::ignoreMilliseconds, BooleanParam())
-               addNamelessLast(paramValues::referenceDir, FileParam(true), "Reference directory", true)
-               addNamelessLast(paramValues::toSearchInDirs, FileListParam(1..Int.MAX_VALUE, true), "Directories to search in", true)
+               addNamelessLast(paramValues::referenceDir, FileParam(true), required = true)
+               addNamelessLast(paramValues::toSearchInDirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
             CorrectDiffInFileModificationDate(pl).run(
@@ -319,7 +307,7 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
             ArgParserBuilder(CorrectDiffInFileModificationDateAndExifDateTakenParams()).buildWith {
                add(paramValues::ignoreSecondsDiff, IntParam())
                add(paramValues::ignoreHoursDiff, IntParam())
-               addNamelessLast(paramValues::dirs, FileListParam(1..Int.MAX_VALUE, true), "Directories to search in", true)
+               addNamelessLast(paramValues::dirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
             CorrectDiffInFileModificationDateAndExifDateTaken(pl).run(
@@ -332,7 +320,7 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
       addActionParser(
             Commands.RENAME_FILES_TO_MODIFICATION_DATE.command,
             ArgParserBuilder(RenameFilesToModificationDateParams()).buildWith {
-               addNamelessLast(paramValues::dirs, FileListParam(1..Int.MAX_VALUE, true), "Directories", true)
+               addNamelessLast(paramValues::dirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
             RenameFilesToModificationDate(pl).run(
@@ -343,7 +331,7 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
       addActionParser(
             Commands.LIST_INDEX_RUNS.command,
             ArgParserBuilder(ListIndexRunsParams()).buildWith {
-               addNamelessLast(paramValues::dir, FileParam(), "Directory")
+               addNamelessLast(paramValues::dir, FileParam())
             }) {
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
             ListIndexRuns(pl).run(paramValues.dir?.canonicalFile)
@@ -353,7 +341,7 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
       addActionParser(
             Commands.LIST_PATHS.command,
             ArgParserBuilder(ListPathsParams()).buildWith {
-               addNamelessLast(paramValues::dir, FileParam(), "Directory", true)
+               addNamelessLast(paramValues::dir, FileParam(), required = true)
             }) {
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
             ListPaths(pl).run(paramValues.dir!!.canonicalFile)
@@ -397,7 +385,7 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
             ArgParserBuilder(ImportOldDbParams()).buildWith {
                add(paramValues::mediumSerial, StringParam())
                add(paramValues::mediumDescription, StringParam())
-               add(paramValues::oldDb, FileParam(checkIsFile = true), "Old DB", true)
+               add(paramValues::oldDb, FileParam(checkIsFile = true), required = true)
             }) {
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
             ImportOldDatabase(pl).import(paramValues.oldDb!!.canonicalFile, paramValues.mediumSerial, paramValues.mediumDescription)
@@ -406,8 +394,8 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
 
       addActionParser(Commands.STATUS.command) {
          logger.info("verbose = ${Config.INST.verbose}")
-         logger.info("silent = ${Config.INST.silent}")
-         logger.info("headless = ${Config.INST.headless}")
+         logger.info("confirmations = ${Config.INST.confirmations}")
+         logger.info("progressWindow = ${Config.INST.progressWindow}")
          logger.info("dryRun = ${Config.INST.dryRun}")
          logger.info("fastMode = ${Config.INST.fastMode}")
          logger.info("ignoreHashInFastMode = ${Config.INST.ignoreHashInFastMode}")

@@ -270,7 +270,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
                    "Required is ${diskspaceNeeded.formatAsFileSize()}, but only ${usableSpace.formatAsFileSize()} is available.\n" +
                    "Backup process is not started."
 
-         if (Config.INST.silent) {
+         if (!Config.INST.confirmations) {
             logger.error(msg)
             return false
          }
@@ -278,7 +278,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
          return false
       }
 
-      if (Config.INST.silent) return true
+      if (!Config.INST.confirmations) return true
 
       val changedPercent = if (totalNumberOfFiles > 0) changedNumberOfFiles * 100 / totalNumberOfFiles else 0
       if (changedPercent >= Config.INST.maxChangedFilesWarningPercent

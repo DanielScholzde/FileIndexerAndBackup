@@ -115,7 +115,7 @@ class IndexFiles(private val dir: File,
          )
 
          try {
-            if (!Config.INST.headless) {
+            if (Config.INST.progressWindow) {
                InfopanelSwing.show()
                stat.startRefresh()
             }
@@ -126,7 +126,7 @@ class IndexFiles(private val dir: File,
             pl.updateIndexRun(indexRun!!)
          } finally {
             pl.clearFilePathCache()
-            if (!Config.INST.headless) {
+            if (Config.INST.progressWindow) {
                stat.stopRefresh()
                InfopanelSwing.close()
             }
