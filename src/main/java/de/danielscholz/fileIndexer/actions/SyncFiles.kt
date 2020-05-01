@@ -27,9 +27,8 @@ class SyncFiles(private val pl: PersistenceLayer) {
            mediumSerialTarget: String?,
            skipIndexFilesOfSourceDir: Boolean,
            timeZone: TimeZone?,
-           maxParallelReadsGeneral: Int,
-           maxParallelReadsSmallFiles: Int,
-           smallFilesThreshold: Int) {
+           sourceReadConfig: IndexFiles.ReadConfig,
+           targetReadConfig: IndexFiles.ReadConfig) {
 
       if (skipIndexFilesOfSourceDir) {
          logger.info("Skip: Create index of source directory $sourceDir")
@@ -42,9 +41,7 @@ class SyncFiles(private val pl: PersistenceLayer) {
                     timeZone,
                     false,
                     false,
-                    maxParallelReadsGeneral,
-                    maxParallelReadsSmallFiles,
-                    smallFilesThreshold,
+                    sourceReadConfig,
                     pl).run()
       }
 
@@ -69,9 +66,7 @@ class SyncFiles(private val pl: PersistenceLayer) {
                     timeZone,
                     false,
                     false,
-                    maxParallelReadsGeneral,
-                    maxParallelReadsSmallFiles,
-                    smallFilesThreshold,
+                    targetReadConfig,
                     pl).run()
       } else {
          logger.info("Verify files within target directory")
@@ -84,9 +79,7 @@ class SyncFiles(private val pl: PersistenceLayer) {
                        timeZone,
                        false,
                        false,
-                       maxParallelReadsGeneral,
-                       maxParallelReadsSmallFiles,
-                       smallFilesThreshold,
+                       targetReadConfig,
                        pl).run()
          }
       }
@@ -166,9 +159,7 @@ class SyncFiles(private val pl: PersistenceLayer) {
                  timeZone,
                  false,
                  false,
-                 maxParallelReadsGeneral,
-                 maxParallelReadsSmallFiles,
-                 smallFilesThreshold,
+                 targetReadConfig,
                  pl).run()
 
       // todo compare source and target directory

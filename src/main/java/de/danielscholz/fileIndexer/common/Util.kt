@@ -294,3 +294,7 @@ fun Config.getDiffTo(config: Config): List<Pair<String, Any?>> {
    }
    return result
 }
+
+fun isTest(): Boolean {
+   return Exception().stackTrace.any { it.className.contains(".junit.") }
+}

@@ -39,10 +39,18 @@ class IndexFiles(private val dir: File,
                  private val timezone: TimeZone?,
                  private val indexArchiveContents: Boolean,
                  private val updateHardlinksInLastIndex: Boolean,
-                 private val maxParallelReadsGeneral: Int,
-                 private val maxParallelReadsSmallFilesFactor: Int,
-                 private val smallFilesSizeThreshold: Int,
+                 private val readConfig: ReadConfig,
                  private val pl: PersistenceLayer) {
+
+   class ReadConfig(val maxParallelReadsGeneral: Int, val maxParallelReadsSmallFilesFactor: Int, val smallFilesSizeThreshold: Int) {
+      @Suppress("MemberVisibilityCanBePrivate")
+      companion object {
+         val hd = ReadConfig(1, 2, 10_000)
+         val ssd = ReadConfig(2, 2, 500_000)
+         val network = ReadConfig(1, 2, 2_000_000)
+         val configs = mapOf("hd" to hd, "ssd" to ssd, "network" to network)
+      }
+   }
 
    private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -632,8 +640,8 @@ class IndexFiles(private val dir: File,
       }
    }
 
-   private val readSemaphore = Semaphore(maxParallelReadsGeneral)
-   private val readSemaphoreSmall = Semaphore(maxParallelReadsGeneral * maxParallelReadsSmallFilesFactor)
+   private val readSemaphore = Semaphore(readConfig.maxParallelReadsGeneral)
+   private val readSemaphoreSmall = Semaphore(readConfig.maxParallelReadsGeneral * readConfig.maxParallelReadsSmallFilesFactor)
 
    private suspend fun <T> readSemaphore(filename: String,
                                          fileSize: Long,
@@ -643,14 +651,14 @@ class IndexFiles(private val dir: File,
       if (inArchive || alreadyWithinReadSemaphore) {
          return block()
       }
-      if (smallFilesSizeThreshold == 0) {
+      if (readConfig.smallFilesSizeThreshold == 0) {
          return readSemaphore.withPermit("General", filename) {
             block()
          }
       }
 
       suspend fun smallPermit(): T {
-         when (maxParallelReadsSmallFilesFactor) {
+         when (readConfig.maxParallelReadsSmallFilesFactor) {
             1    -> return readSemaphoreSmall.withPermit("Small", filename) {
                block()
             }
@@ -670,7 +678,7 @@ class IndexFiles(private val dir: File,
          }
       }
 
-      if (fileSize > smallFilesSizeThreshold) {
+      if (fileSize > readConfig.smallFilesSizeThreshold) {
          return readSemaphore.withPermit("General", filename) {
             smallPermit()
          }
@@ -682,9 +690,9 @@ class IndexFiles(private val dir: File,
    }
 
    private fun getParallelReads(): String {
-      val general = maxParallelReadsGeneral - readSemaphore.availablePermits
-      val small = maxParallelReadsGeneral * maxParallelReadsSmallFilesFactor - readSemaphoreSmall.availablePermits
-      return "" + (general + small - general * maxParallelReadsSmallFilesFactor)
+      val general = readConfig.maxParallelReadsGeneral - readSemaphore.availablePermits
+      val small = readConfig.maxParallelReadsGeneral * readConfig.maxParallelReadsSmallFilesFactor - readSemaphoreSmall.availablePermits
+      return "" + (general + small - general * readConfig.maxParallelReadsSmallFilesFactor)
    }
 
    private suspend inline fun <T> Semaphore.withPermit(semaphoreName: String, filename: String, action: () -> T): T {

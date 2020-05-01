@@ -1,5 +1,6 @@
 package de.danielscholz.fileIndexer
 
+import de.danielscholz.fileIndexer.actions.IndexFiles
 import java.io.File
 import java.util.*
 
@@ -15,6 +16,7 @@ class IndexFilesParams {
    var mediumSerial: String? = null
    var noArchiveContents: Boolean = false
    var updateHardlinksInLastIndex: Boolean = false
+   var readConfig: IndexFiles.ReadConfig = IndexFiles.ReadConfig.hd
 }
 
 class SyncFilesParams {
@@ -25,6 +27,8 @@ class SyncFilesParams {
    var mediumSerialSource: String? = null
    var mediumSerialTarget: String? = null
    var skipIndexFilesOfSourceDir: Boolean = false
+   var sourceReadConfig: IndexFiles.ReadConfig = IndexFiles.ReadConfig.hd
+   var targetReadConfig: IndexFiles.ReadConfig = IndexFiles.ReadConfig.hd
 }
 
 class BackupFilesParams {
@@ -36,6 +40,7 @@ class BackupFilesParams {
    var mediumSerialTarget: String? = null
    var skipIndexFilesOfSourceDir = false
    var indexArchiveContentsOfSourceDir = false
+   var sourceReadConfig: IndexFiles.ReadConfig = IndexFiles.ReadConfig.hd
 }
 
 class DeleteDuplicateFilesParams {

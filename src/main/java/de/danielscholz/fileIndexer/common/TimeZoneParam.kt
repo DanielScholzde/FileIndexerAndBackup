@@ -21,6 +21,10 @@ class TimeZoneParam : ParamParserBase<TimeZone, TimeZone?>() {
       callback?.invoke(value!!) ?: throw ArgParseException("callback must be specified!", argParser!!)
    }
 
+   override fun convertToStr(value: TimeZone?): String? {
+      return if (value != null) value.id else null
+   }
+
    override fun printout(): String {
       return "timezone"
    }

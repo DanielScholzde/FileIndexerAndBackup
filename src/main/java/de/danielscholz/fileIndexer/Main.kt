@@ -136,7 +136,8 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
                add(paramValues::mediumSerial, StringParam())
                add(paramValues::noArchiveContents, BooleanParam())
                add(paramValues::updateHardlinksInLastIndex, BooleanParam())
-               add(paramValues::lastIndexDir, FileParam(true))
+               add(paramValues::lastIndexDir, FileParam())
+               add(paramValues::readConfig, ReadConfigParam())
                addNamelessLast(paramValues::dirs, FileListParam(1..10, true), "Directories to index", true)
             }) {
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
@@ -150,9 +151,7 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
                              globalParams.timeZone,
                              !paramValues.noArchiveContents,
                              paramValues.updateHardlinksInLastIndex,
-                             1,
-                             2,
-                             500_000,
+                             paramValues.readConfig,
                              pl).run()
                }
             } finally {
@@ -168,7 +167,10 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
                add(Config.INST::ignoreHashInFastMode, BooleanParam())
                add(Config.INST::createHashOnlyForFirstMb, BooleanParam())
                add(Config.INST::createThumbnails, BooleanParam())
+               add(Config.INST::thumbnailSize, IntParam())
                add(Config.INST::alwaysCheckHashOnIndexForFilesSuffix, StringSetParam())
+               add(Config.INST::allowMultithreading, BooleanParam())
+               add(Config.INST::maxThreads, IntParam())
                add(Config.INST::minDiskFreeSpacePercent, IntParam())
                add(Config.INST::minDiskFreeSpaceMB, IntParam())
                add(paramValues::mediumDescriptionSource, StringParam())
@@ -176,6 +178,8 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
                add(paramValues::mediumSerialSource, StringParam())
                add(paramValues::mediumSerialTarget, StringParam())
                add(paramValues::skipIndexFilesOfSourceDir, BooleanParam())
+               add(paramValues::sourceReadConfig, ReadConfigParam())
+               add(paramValues::targetReadConfig, ReadConfigParam())
                addNamelessLast(paramValues::sourceDir, FileParam(checkIsDir = true), "Source directory", true)
                addNamelessLast(paramValues::targetDir, FileParam(checkIsDir = true), "Target directory", true)
             }) {
@@ -189,9 +193,8 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
                   paramValues.mediumSerialTarget,
                   paramValues.skipIndexFilesOfSourceDir,
                   globalParams.timeZone,
-                  1,
-                  2,
-                  500_000)
+                  paramValues.sourceReadConfig,
+                  paramValues.targetReadConfig)
          }
       }
 
@@ -201,10 +204,13 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
                add(Config.INST::fastMode, BooleanParam())
                add(Config.INST::ignoreHashInFastMode, BooleanParam())
                add(Config.INST::createHashOnlyForFirstMb, BooleanParam())
+               add(Config.INST::createThumbnails, BooleanParam())
+               add(Config.INST::thumbnailSize, IntParam())
                add(Config.INST::maxChangedFilesWarningPercent, IntParam())
                add(Config.INST::minAllowedChanges, IntParam())
-               add(Config.INST::createThumbnails, BooleanParam())
                add(Config.INST::alwaysCheckHashOnIndexForFilesSuffix, StringSetParam())
+               add(Config.INST::allowMultithreading, BooleanParam())
+               add(Config.INST::maxThreads, IntParam())
                add(Config.INST::minDiskFreeSpacePercent, IntParam())
                add(Config.INST::minDiskFreeSpaceMB, IntParam())
                add(paramValues::mediumDescriptionSource, StringParam())
@@ -213,6 +219,7 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
                add(paramValues::mediumSerialTarget, StringParam())
                add(paramValues::skipIndexFilesOfSourceDir, BooleanParam())
                add(paramValues::indexArchiveContentsOfSourceDir, BooleanParam())
+               add(paramValues::sourceReadConfig, ReadConfigParam())
                addNamelessLast(paramValues::sourceDir, FileParam(checkIsDir = true), "Source directory", true)
                addNamelessLast(paramValues::targetDir, FileParam(checkIsDir = true), "Target directory", true)
             }) {
@@ -227,9 +234,7 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
                   paramValues.indexArchiveContentsOfSourceDir,
                   paramValues.skipIndexFilesOfSourceDir,
                   globalParams.timeZone,
-                  1,
-                  2,
-                  500_000)
+                  paramValues.sourceReadConfig)
          }
       }
 
@@ -487,10 +492,6 @@ private fun processConsoleInputs(console: Console, pl: PersistenceLayer) {
          }
       }
    }
-}
-
-private fun isTest(): Boolean {
-   return Exception().stackTrace.any { it.className.contains(".junit.") }
 }
 
 // todo auto_vacuum

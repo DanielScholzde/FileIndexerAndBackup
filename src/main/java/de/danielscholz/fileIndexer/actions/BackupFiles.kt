@@ -42,9 +42,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
            indexArchiveContents: Boolean,
            skipIndexFilesOfSourceDir: Boolean,
            timeZone: TimeZone?,
-           maxParallelReadsGeneral: Int,
-           maxParallelReadsSmallFiles: Int,
-           smallFilesThreshold: Int) {
+           sourceReadConfig: IndexFiles.ReadConfig) {
 
       if (!testWriteableAndHardlinkSupport(targetDir)) return
 
@@ -59,9 +57,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
                     timeZone,
                     indexArchiveContents,
                     false,
-                    maxParallelReadsGeneral,
-                    maxParallelReadsSmallFiles,
-                    smallFilesThreshold,
+                    sourceReadConfig,
                     pl).run()
       }
 
