@@ -26,6 +26,6 @@ class ReadConfigParam : ParamParserBase<IndexFiles.ReadConfig, IndexFiles.ReadCo
    }
 
    override fun printout(): String {
-      return "read config: ${IndexFiles.ReadConfig.configs.keys.joinToString("|")}"
+      return IndexFiles.ReadConfig.configs.keys.joinToString("|")
    }
 }

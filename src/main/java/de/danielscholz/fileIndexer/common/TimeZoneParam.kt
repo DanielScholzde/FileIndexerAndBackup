@@ -26,6 +26,6 @@ class TimeZoneParam : ParamParserBase<TimeZone, TimeZone?>() {
    }
 
    override fun printout(): String {
-      return "timezone"
+      return "timeZoneID"
    }
 }

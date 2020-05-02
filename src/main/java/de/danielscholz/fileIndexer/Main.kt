@@ -35,6 +35,7 @@ fun main(args: Array<String>) {
  */
 internal fun main(args: Array<String>,
                   toplevel: Boolean = true,
+                  parentGlobalParams: GlobalParams? = null,
                   runBeforeArgParsing: () -> Unit = {},
                   runAfterArgParsing: () -> Unit = {},
                   runBeforeCmd: (PersistenceLayer) -> Unit = {},
@@ -45,7 +46,7 @@ internal fun main(args: Array<String>,
    }
    registerLowMemoryListener()
 
-   val parser = createParser(toplevel) { globalParams: GlobalParams, command: (PersistenceLayer) -> Unit ->
+   val parser = createParser(toplevel, parentGlobalParams) { globalParams: GlobalParams, command: (PersistenceLayer) -> Unit ->
       if (globalParams.db == null) globalParams.db = File("IndexedFiles")
       val inMemoryDb = globalParams.db!!.name == ":memory:"
       if (!inMemoryDb) {
@@ -97,7 +98,7 @@ internal fun main(args: Array<String>,
 }
 
 @Suppress("DuplicatedCode")
-private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (PersistenceLayer) -> Unit) -> Unit): ArgParser<GlobalParams> {
+private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, outerCallback: (GlobalParams, (PersistenceLayer) -> Unit) -> Unit): ArgParser<GlobalParams> {
 
    fun ArgParserBuilder<*>.addConfigParamsForIndexFiles() {
       add(Config.INST::fastMode, BooleanParam())
@@ -121,7 +122,7 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
       loggerInfo(property.name, property.get())
    }
 
-   return ArgParserBuilder(GlobalParams()).buildWith(ArgParserConfig(ignoreCase = true, noPrefixForActionParams = true)) {
+   return ArgParserBuilder(parentGlobalParams ?: GlobalParams()).buildWith(ArgParserConfig(ignoreCase = true, noPrefixForActionParams = true)) {
       val globalParams = paramValues
 
       addActionParser("help", "Show all available options and commands") {
@@ -465,6 +466,7 @@ private fun processConsoleInputs(console: Console, globalParams: GlobalParams) {
 
          main(arguments.toTypedArray(),
               false,
+              globalParams,
               {
                  configCopy = Config.INST.getCopy()
                  globalParamsCopy = globalParams.getCopy()

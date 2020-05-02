@@ -6,17 +6,30 @@ import java.io.File
 import java.util.*
 
 class GlobalParams {
+   @Description("Database file")
    var db: File? = null
 }
 
 class IndexFilesParams {
    @Description("Directories to index")
    var dirs: List<File> = listOf()
+
+   @Description("Last indexed directory, leave empty for most use cases!")
    var lastIndexDir: File? = null
+
+   @Description("Description of the medium, like 'Backup CD 1'")
    var mediumDescription: String? = null
+
+   @Description("Serial number of the medium, will be determined automatically if running under windows")
    var mediumSerial: String? = null
+
+   @Description("Create index archive contents too")
    var noArchiveContents: Boolean = false
+
+   @Description("Update hardlink attribute in last index layer; leave as is in most use cases")
    var updateHardlinksInLastIndex: Boolean = false
+
+   @Description("Optimize read speed for different types of medium (number of parallel reads)")
    var readConfig: IndexFiles.ReadConfig = IndexFiles.ReadConfig.hd
 }
 
@@ -26,12 +39,26 @@ class SyncFilesParams {
 
    @Description("Target directory")
    var targetDir: File? = null
+
+   @Description("Description of the source medium, like 'Drive C'")
    var mediumDescriptionSource: String? = null
+
+   @Description("Description of the target medium, like 'Backup HD 1'")
    var mediumDescriptionTarget: String? = null
+
+   @Description("Serial number of the source medium, will be determined automatically if running under windows")
    var mediumSerialSource: String? = null
+
+   @Description("Serial number of the target medium, will be determined automatically if running under windows")
    var mediumSerialTarget: String? = null
+
+   @Description("Skip create index of source directory. For most applications please do not change this!")
    var skipIndexFilesOfSourceDir: Boolean = false
+
+   @Description("Optimize read speed for different types of medium (number of parallel reads)")
    var sourceReadConfig: IndexFiles.ReadConfig = IndexFiles.ReadConfig.hd
+
+   @Description("Optimize read speed for different types of medium (number of parallel reads)")
    var targetReadConfig: IndexFiles.ReadConfig = IndexFiles.ReadConfig.hd
 }
 
@@ -41,12 +68,26 @@ class BackupFilesParams {
 
    @Description("Target directory")
    var targetDir: File? = null
+
+   @Description("Description of the source medium, like 'Drive C'")
    var mediumDescriptionSource: String? = null
+
+   @Description("Description of the target medium, like 'Backup HD 1'")
    var mediumDescriptionTarget: String? = null
+
+   @Description("Serial number of the source medium, will be determined automatically if running under windows")
    var mediumSerialSource: String? = null
+
+   @Description("Serial number of the target medium, will be determined automatically if running under windows")
    var mediumSerialTarget: String? = null
+
+   @Description("Skip create index of source directory. For most applications please do not change this!")
    var skipIndexFilesOfSourceDir = false
+
+   @Description("Create index archive contents too")
    var indexArchiveContentsOfSourceDir = false
+
+   @Description("Optimize read speed for different types of medium (number of parallel reads)")
    var sourceReadConfig: IndexFiles.ReadConfig = IndexFiles.ReadConfig.hd
 }
 
@@ -106,6 +147,7 @@ class VerifyFilesParams {
 class RemoveIndexRunParams {
    @Description("Index number")
    var indexNr: Int? = null
+
    @Description("Range of index numbers: start-end")
    var indexNrRange: IntRange? = null
 }
