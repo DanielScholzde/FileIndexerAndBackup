@@ -146,7 +146,7 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
       add(Config.INST::confirmations, BooleanParam())
       add(Config.INST::excludedPaths, StringSetParam(mapper = { it.replace('\\', '/') }))
       add(Config.INST::excludedFiles, StringSetParam(mapper = { it.replace('\\', '/') }))
-      add(globalParams::timeZone, TimeZoneParam())
+      add(Config.INST::timeZone, TimeZoneParam())
 
       if (toplevel) {
          addActionParser(Commands.CONSOLE.command) {
@@ -179,7 +179,6 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
                           paramValues.lastIndexDir?.canonicalFile,
                           paramValues.mediumDescription,
                           paramValues.mediumSerial,
-                          globalParams.timeZone,
                           !paramValues.noArchiveContents,
                           paramValues.updateHardlinksInLastIndex,
                           paramValues.readConfig,
@@ -212,7 +211,6 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
                   paramValues.mediumSerialSource,
                   paramValues.mediumSerialTarget,
                   paramValues.skipIndexFilesOfSourceDir,
-                  globalParams.timeZone,
                   paramValues.sourceReadConfig,
                   paramValues.targetReadConfig)
          }
@@ -243,7 +241,6 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
                   paramValues.mediumSerialTarget,
                   paramValues.indexArchiveContentsOfSourceDir,
                   paramValues.skipIndexFilesOfSourceDir,
-                  globalParams.timeZone,
                   paramValues.sourceReadConfig)
          }
       }
@@ -416,7 +413,7 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
 
       addActionParser(Commands.STATUS.command) {
          loggerInfo(globalParams::db)
-         loggerInfo(globalParams::timeZone)
+         loggerInfo(Config.INST::timeZone)
          loggerInfo(Config.INST::verbose)
          loggerInfo(Config.INST::confirmations)
          loggerInfo(Config.INST::progressWindow)

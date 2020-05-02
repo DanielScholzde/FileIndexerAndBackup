@@ -1,6 +1,7 @@
 package de.danielscholz.fileIndexer
 
 import de.danielscholz.kargparser.Description
+import java.util.*
 
 class Config {
 
@@ -9,6 +10,8 @@ class Config {
       @Volatile
       var INST = Config()
    }
+
+   var timeZone: TimeZone = TimeZone.getDefault()
 
    @Description("Part of filename (without path). To exclude files by extension, use: \".jpg/\"\n" +
                 "Hint: a full filename is matched by \"/name/\" (enclosed by separator char)\n" +

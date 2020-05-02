@@ -41,7 +41,6 @@ class BackupFiles(private val pl: PersistenceLayer) {
            mediumSerialTarget: String?,
            indexArchiveContents: Boolean,
            skipIndexFilesOfSourceDir: Boolean,
-           timeZone: TimeZone?,
            sourceReadConfig: IndexFiles.ReadConfig) {
 
       if (!testWriteableAndHardlinkSupport(targetDir)) return
@@ -54,7 +53,6 @@ class BackupFiles(private val pl: PersistenceLayer) {
                     null,
                     mediumDescriptionSource,
                     mediumSerialSource,
-                    timeZone,
                     indexArchiveContents,
                     false,
                     sourceReadConfig,

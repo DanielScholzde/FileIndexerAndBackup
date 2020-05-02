@@ -7,7 +7,6 @@ import java.util.*
 
 class GlobalParams {
    var db: File? = null
-   var timeZone: TimeZone? = TimeZone.getDefault()
 }
 
 class IndexFilesParams {

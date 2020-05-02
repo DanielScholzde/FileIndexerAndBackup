@@ -36,7 +36,6 @@ class IndexFiles(private val dir: File,
                  private val lastIndexDir: File?,
                  private val mediumDescription: String?,
                  private val mediumSerial: String?,
-                 private val timezone: TimeZone?,
                  private val indexArchiveContents: Boolean,
                  private val updateHardlinksInLastIndex: Boolean,
                  private val readConfig: ReadConfig,
@@ -468,7 +467,7 @@ class IndexFiles(private val dir: File,
                         checksum.sha1ChunksFromEnd.joinToString(",")))
 
       if (lazyImgContent != null && lazyImgContent.isInitialized()) {
-         val imgAttr = extractExifOriginalDateAndDimension(lazyImgContent.value, timezone ?: TimeZone.getDefault())
+         val imgAttr = extractExifOriginalDateAndDimension(lazyImgContent.value, Config.INST.timeZone)
          if (imgAttr.originalDate != null || imgAttr.width != null) {
             pl.insertIntoFileMeta(FileMeta(0, pl, fileContent.id, imgAttr.width, imgAttr.height, imgAttr.originalDate))
          }
