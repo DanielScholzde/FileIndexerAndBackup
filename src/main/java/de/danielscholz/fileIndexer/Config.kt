@@ -14,17 +14,12 @@ class Config {
    var timeZone: TimeZone = TimeZone.getDefault()
 
    @Description("Part of filename (without path). To exclude files by extension, use: \".jpg/\"\n" +
-                "Hint: a full filename is matched by \"/name/\" (enclosed by separator char)\n" +
-                "If the underlying filesystem is case sensitive, these entries are also case sensitive.")
+                "Hint: a full filename is matched by \"/name/\" (enclosed by /). If the underlying filesystem is case-sensitive, these entries are also.")
    var excludedFiles: Set<String> = setOf()
 
-   @Description("Part of path (without filename) OR absolute path. Separator char is \"/\".\n" +
-                "An absolute path is defined by starting with \"//\", e.g. \"//my/absolute/path/\"\n" +
-                "Hint: a full directory name is matched by \"/name/\" (enclosed by separator char)\n" +
-                "If the underlying filesystem is case sensitive, these entries are also case sensitive.")
+   @Description("Part of path (without filename) OR absolute path. Separator char is \"/\". An absolute path is defined by starting with \"//\", e.g. \"//absolute/path/\"\n" +
+                "Hint: a full directory name is matched by \"/name/\" (enclosed by /). If the underlying filesystem is case-sensitive, these entries are also.")
    var excludedPaths: Set<String> = setOf()
-
-   var alwaysCheckHashOnIndexForFilesSuffix: Set<String> = setOf()
 
    val defaultExcludedFiles = setOf("/thumbs.db/", "/desktop.ini/")
    val defaultExcludedPaths = setOf("/\$RECYCLE.BIN/", "/System Volume Information/")
@@ -46,8 +41,12 @@ class Config {
    @Description("Should the hash of the first MB also be ignored in fastMode?")
    var ignoreHashInFastMode = false
 
-   @Description("Should the hash only be created with the first MB of the file?\n(faster, but not recommended. May cause problems. Incompatible with indexed files with a hash for full content)")
+   // Incompatible with indexed files with a hash for full content!
+   @Description("Should the hash only be created with the first MB of the file? (faster, but not recommended! May cause problems)")
    var createHashOnlyForFirstMb = false
+
+   @Description("Suffix of files to always calculate the hash. May be a file extension (e.g. '.dat'), a longer suffix ('a.dat') or a complete filename")
+   var alwaysCheckHashOnIndexForFilesSuffix: Set<String> = setOf()
 
    @Description("Should a test run be done without any file changes (except the database)?")
    var dryRun = false

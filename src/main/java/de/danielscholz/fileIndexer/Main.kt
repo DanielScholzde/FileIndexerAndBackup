@@ -106,7 +106,7 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
       add(Config.INST::createHashOnlyForFirstMb, BooleanParam())
       add(Config.INST::createThumbnails, BooleanParam())
       add(Config.INST::thumbnailSize, IntParam())
-      add(Config.INST::alwaysCheckHashOnIndexForFilesSuffix, StringSetParam())
+      add(Config.INST::alwaysCheckHashOnIndexForFilesSuffix, StringSetParam(typeDescription = ""))
       add(Config.INST::allowMultithreading, BooleanParam())
       add(Config.INST::maxThreads, IntParam())
    }
@@ -135,8 +135,8 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
       add(Config.INST::verbose, BooleanParam())
       add(Config.INST::progressWindow, BooleanParam())
       add(Config.INST::confirmations, BooleanParam())
-      add(Config.INST::excludedPaths, StringSetParam(mapper = { it.replace('\\', '/') }))
-      add(Config.INST::excludedFiles, StringSetParam(mapper = { it.replace('\\', '/') }))
+      add(Config.INST::excludedPaths, StringSetParam(mapper = { it.replace('\\', '/') }, typeDescription = ""))
+      add(Config.INST::excludedFiles, StringSetParam(mapper = { it.replace('\\', '/') }, typeDescription = ""))
       add(Config.INST::timeZone, TimeZoneParam())
 
       if (toplevel) {

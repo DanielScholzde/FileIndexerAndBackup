@@ -104,10 +104,13 @@ class DeleteDuplicateFilesParams {
 }
 
 class FindFilesWithNoCopyParams {
+   @Description("Reference directory")
    var referenceDir: File? = null
 
-   @Description("Directories")
+   @Description("Directories to search in")
    var toSearchInDirs: List<File> = listOf()
+
+   @Description("Reverse the meaning of referenceDir and toSearchInDirs")
    var reverse: Boolean = false
 }
 
@@ -117,13 +120,19 @@ class CorrectDiffInFileModificationDateParams {
 
    @Description("Directories to search in")
    var toSearchInDirs: List<File> = listOf()
+
+   @Description("Ignore milliseconds when comparing modification dates")
    var ignoreMilliseconds: Boolean = false
 }
 
 class CorrectDiffInFileModificationDateAndExifDateTakenParams {
    @Description("Directories")
    var dirs: List<File> = listOf()
+
+   @Description("Ignore this maximum difference in seconds when comparing dates")
    var ignoreSecondsDiff: Int = 0
+
+   @Description("Ignore this maximum difference in hours when comparing dates")
    var ignoreHoursDiff: Int = 0
 }
 
@@ -151,7 +160,7 @@ class RemoveIndexRunParams {
    @Description("Index number")
    var indexNr: Int? = null
 
-   @Description("Range of index numbers: start-end")
+   @Description("Range of index numbers")
    var indexNrRange: IntRange? = null
 }
 
@@ -164,7 +173,7 @@ class CompareIndexRunsParams {
 }
 
 class ImportOldDbParams {
-   @Description("Old DB")
+   @Description("Old DB file")
    var oldDb: File? = null
    var mediumDescription: String? = null
    var mediumSerial: String? = null
