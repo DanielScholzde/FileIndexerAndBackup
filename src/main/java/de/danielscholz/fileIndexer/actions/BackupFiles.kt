@@ -13,7 +13,6 @@ import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.time.Instant
-import java.util.*
 import javax.swing.JOptionPane
 
 // todo copy database to backup medium after backup process
@@ -31,7 +30,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
 
    /**
     * @param targetDir target directory (without date)
-    * @param indexArchiveContents Should the archives in the source directory be indexed?
+    * @param indexArchiveContentsOfSourceDir Should the archives in the source directory be indexed?
     */
    fun run(sourceDir: File,
            targetDir: File,
@@ -39,7 +38,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
            mediumDescriptionTarget: String?,
            mediumSerialSource: String?,
            mediumSerialTarget: String?,
-           indexArchiveContents: Boolean,
+           indexArchiveContentsOfSourceDir: Boolean,
            skipIndexFilesOfSourceDir: Boolean,
            sourceReadConfig: IndexFiles.ReadConfig) {
 
@@ -53,7 +52,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
                     null,
                     mediumDescriptionSource,
                     mediumSerialSource,
-                    indexArchiveContents,
+                    indexArchiveContentsOfSourceDir,
                     false,
                     sourceReadConfig,
                     pl).run()

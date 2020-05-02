@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
-import java.util.*
 import javax.swing.JOptionPane
 
 // todo recognize renamed / moved files like in BackupFiles
@@ -25,6 +24,7 @@ class SyncFiles(private val pl: PersistenceLayer) {
            mediumDescriptionTarget: String?,
            mediumSerialSource: String?,
            mediumSerialTarget: String?,
+           indexArchiveContentsOfSourceDir: Boolean,
            skipIndexFilesOfSourceDir: Boolean,
            sourceReadConfig: IndexFiles.ReadConfig,
            targetReadConfig: IndexFiles.ReadConfig) {
@@ -37,7 +37,7 @@ class SyncFiles(private val pl: PersistenceLayer) {
                     null,
                     mediumDescriptionSource,
                     mediumSerialSource,
-                    false,
+                    indexArchiveContentsOfSourceDir,
                     false,
                     sourceReadConfig,
                     pl).run()

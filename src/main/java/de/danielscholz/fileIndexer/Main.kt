@@ -201,6 +201,7 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
                   paramValues.mediumSerialSource,
                   paramValues.mediumSerialTarget,
                   paramValues.skipIndexFilesOfSourceDir,
+                  paramValues.indexArchiveContentsOfSourceDir,
                   paramValues.sourceReadConfig,
                   paramValues.targetReadConfig)
          }

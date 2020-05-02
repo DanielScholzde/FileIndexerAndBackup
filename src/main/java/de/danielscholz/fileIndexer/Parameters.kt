@@ -52,6 +52,9 @@ class SyncFilesParams {
    @Description("Serial number of the target medium, will be determined automatically if running under windows")
    var mediumSerialTarget: String? = null
 
+   @Description("Create index archive contents too")
+   var indexArchiveContentsOfSourceDir = false
+
    @Description("Skip create index of source directory. For most applications please do not change this!")
    var skipIndexFilesOfSourceDir: Boolean = false
 
@@ -81,11 +84,11 @@ class BackupFilesParams {
    @Description("Serial number of the target medium, will be determined automatically if running under windows")
    var mediumSerialTarget: String? = null
 
-   @Description("Skip create index of source directory. For most applications please do not change this!")
-   var skipIndexFilesOfSourceDir = false
-
    @Description("Create index archive contents too")
    var indexArchiveContentsOfSourceDir = false
+
+   @Description("Skip create index of source directory. For most applications please do not change this!")
+   var skipIndexFilesOfSourceDir = false
 
    @Description("Optimize read speed for different types of medium (number of parallel reads)")
    var sourceReadConfig: IndexFiles.ReadConfig = IndexFiles.ReadConfig.hd
