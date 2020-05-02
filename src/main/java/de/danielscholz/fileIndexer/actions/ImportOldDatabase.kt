@@ -122,6 +122,7 @@ class ImportOldDatabase(val pl: PersistenceLayer) {
                               calcFilePathPrefix(dir),
                               "",
                               "",
+                              "",
                               mediumDescription,
                               mediumSerial,
                               false,

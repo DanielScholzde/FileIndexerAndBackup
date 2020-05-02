@@ -33,6 +33,7 @@ import kotlin.math.absoluteValue
  * Files in archives are indexed if indexArchiveContents is true.
  */
 class IndexFiles(private val dir: File,
+                 private val includedPaths: List<String>,
                  private val lastIndexDir: File?,
                  private val mediumDescription: String?,
                  private val mediumSerial: String?,
@@ -72,7 +73,7 @@ class IndexFiles(private val dir: File,
       val dirInfos = runBlocking {
          var dirInfos: DirInfosResult? = null
          launch(Dispatchers.Unconfined) {
-            dirInfos = readAllDirInfos(dir, indexArchiveContents)
+            dirInfos = readAllDirInfos(dir, indexArchiveContents, includedPaths)
          }.join()
          dirInfos!!
       }
@@ -98,6 +99,7 @@ class IndexFiles(private val dir: File,
                         filePath.id,
                         pathWithoutPrefix,
                         calcFilePathPrefix(dir),
+                        includedPaths.convertToSortedStr(),
                         dirInfos.excluded.excludedPathsUsed.convertToSortedStr(),
                         dirInfos.excluded.excludedFilesUsed.convertToSortedStr(),
                         mediumDescription,

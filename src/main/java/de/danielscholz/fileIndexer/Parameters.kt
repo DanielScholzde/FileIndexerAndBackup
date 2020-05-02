@@ -11,8 +11,11 @@ class GlobalParams {
 }
 
 class IndexFilesParams {
-   @Description("Directories to index")
-   var dirs: List<File> = listOf()
+   @Description("Directory to index")
+   var dir: File? = null
+
+   @Description("Included directories; base path is 'dir'. Separator char is \"/\". Specify only if needed")
+   var includedPaths: List<String> = listOf()
 
    @Description("Last indexed directory, leave empty for most use cases!")
    var lastIndexDir: File? = null
@@ -39,6 +42,9 @@ class SyncFilesParams {
 
    @Description("Target directory")
    var targetDir: File? = null
+
+   @Description("Included directories; base path is 'sourceDir'. Separator char is \"/\". Specify only if needed")
+   var includedPaths: List<String> = listOf()
 
    @Description("Description of the source medium, like 'Drive C'")
    var mediumDescriptionSource: String? = null
@@ -71,6 +77,9 @@ class BackupFilesParams {
 
    @Description("Target directory")
    var targetDir: File? = null
+
+   @Description("Included directories; base path is 'sourceDir'. Separator char is \"/\". Specify only if needed")
+   var includedPaths: List<String> = listOf()
 
    @Description("Description of the source medium, like 'Drive C'")
    var mediumDescriptionSource: String? = null

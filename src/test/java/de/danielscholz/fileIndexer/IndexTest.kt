@@ -46,6 +46,7 @@ class IndexTest : BaseTest() {
                         "C:",
                         "",
                         "",
+                        "",
                         null,
                         null,
                         false,

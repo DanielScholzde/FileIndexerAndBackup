@@ -20,6 +20,7 @@ class SyncFiles(private val pl: PersistenceLayer) {
 
    fun run(sourceDir: File,
            targetDir: File,
+           includedPaths: List<String>,
            mediumDescriptionSource: String?,
            mediumDescriptionTarget: String?,
            mediumSerialSource: String?,
@@ -34,6 +35,7 @@ class SyncFiles(private val pl: PersistenceLayer) {
       } else {
          logger.info("Create index of source directory $sourceDir")
          IndexFiles(sourceDir,
+                    includedPaths,
                     null,
                     mediumDescriptionSource,
                     mediumSerialSource,
@@ -58,6 +60,7 @@ class SyncFiles(private val pl: PersistenceLayer) {
          Files.createDirectories(targetDir.toPath())
          logger.info("Index target directory") // todo excluded FilePath should not be considered here!
          IndexFiles(targetDir,
+                    listOf(),
                     null,
                     mediumDescriptionTarget,
                     mediumSerialTarget,
@@ -70,6 +73,7 @@ class SyncFiles(private val pl: PersistenceLayer) {
          if (!VerifyFiles(pl, false).run(targetDir, true)) {
             logger.warn("Files within target directory have changed! Create new index.")
             IndexFiles(targetDir,
+                       listOf(),
                        null,
                        mediumDescriptionTarget,
                        mediumSerialTarget,
@@ -149,6 +153,7 @@ class SyncFiles(private val pl: PersistenceLayer) {
 
       logger.info("Index target directory")
       IndexFiles(targetDir,
+                 listOf(),
                  null,
                  mediumDescriptionTarget,
                  mediumSerialTarget,

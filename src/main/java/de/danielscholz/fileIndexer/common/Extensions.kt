@@ -15,6 +15,10 @@ fun String?.ifEmpty(emptyReturn: String): String {
    return if (this == null || this.isEmpty()) emptyReturn else this
 }
 
+fun String?.nullIfEmpty(): String? {
+   return if (this == null || this.isEmpty()) null else this
+}
+
 fun String.getSha1Chunk(): String {
    return substring(0, 12)
 }

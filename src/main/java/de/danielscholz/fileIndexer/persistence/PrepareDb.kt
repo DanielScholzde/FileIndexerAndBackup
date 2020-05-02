@@ -57,6 +57,7 @@ object PrepareDb {
                 isBackup INTEGER NOT NULL,
                 onlyReadFirstMbOfContentForHash INTEGER,
                 mediumCaseSensitive INTEGER NOT NULL,
+                includedPaths TEXT NOT NULL,
                 excludedPaths TEXT NOT NULL,
                 excludedFiles TEXT NOT NULL,
                 totalSpace INTEGER NOT NULL,

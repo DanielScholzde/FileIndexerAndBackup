@@ -161,19 +161,19 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
                add(paramValues::updateHardlinksInLastIndex, BooleanParam())
                add(paramValues::lastIndexDir, FileParam())
                add(paramValues::readConfig, ReadConfigParam())
-               addNamelessLast(paramValues::dirs, FileListParam(1..10, true), required = true)
+               add(paramValues::includedPaths, StringListParam(mapper = { it.replace('\\', '/').removePrefix("/").removeSuffix("/") }))
+               addNamelessLast(paramValues::dir, FileParam(true), required = true)
             }) {
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
-            for (dir in paramValues.dirs) {
-               IndexFiles(dir.canonicalFile,
-                          paramValues.lastIndexDir?.canonicalFile,
-                          paramValues.mediumDescription,
-                          paramValues.mediumSerial,
-                          paramValues.indexArchiveContents,
-                          paramValues.updateHardlinksInLastIndex,
-                          paramValues.readConfig,
-                          pl).run()
-            }
+            IndexFiles(paramValues.dir!!.canonicalFile,
+                       paramValues.includedPaths,
+                       paramValues.lastIndexDir?.canonicalFile,
+                       paramValues.mediumDescription,
+                       paramValues.mediumSerial,
+                       paramValues.indexArchiveContents,
+                       paramValues.updateHardlinksInLastIndex,
+                       paramValues.readConfig,
+                       pl).run()
          }
       }
 
@@ -189,6 +189,7 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
                add(paramValues::skipIndexFilesOfSourceDir, BooleanParam())
                add(paramValues::sourceReadConfig, ReadConfigParam())
                add(paramValues::targetReadConfig, ReadConfigParam())
+               add(paramValues::includedPaths, StringListParam(mapper = { it.replace('\\', '/').removePrefix("/").removeSuffix("/") }))
                addNamelessLast(paramValues::sourceDir, FileParam(checkIsDir = true), required = true)
                addNamelessLast(paramValues::targetDir, FileParam(checkIsDir = true), required = true)
             }) {
@@ -196,6 +197,7 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
             SyncFiles(pl).run(
                   paramValues.sourceDir!!.canonicalFile,
                   paramValues.targetDir!!.canonicalFile,
+                  paramValues.includedPaths,
                   paramValues.mediumDescriptionSource,
                   paramValues.mediumDescriptionTarget,
                   paramValues.mediumSerialSource,
@@ -219,6 +221,7 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
                add(paramValues::skipIndexFilesOfSourceDir, BooleanParam())
                add(paramValues::indexArchiveContentsOfSourceDir, BooleanParam())
                add(paramValues::sourceReadConfig, ReadConfigParam())
+               add(paramValues::includedPaths, StringListParam(mapper = { it.replace('\\', '/').removePrefix("/").removeSuffix("/") }))
                addNamelessLast(paramValues::sourceDir, FileParam(checkIsDir = true), required = true)
                addNamelessLast(paramValues::targetDir, FileParam(checkIsDir = true), required = true)
             }) {
@@ -226,6 +229,7 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
             BackupFiles(pl).run(
                   paramValues.sourceDir!!.canonicalFile,
                   paramValues.targetDir!!.canonicalFile,
+                  paramValues.includedPaths,
                   paramValues.mediumDescriptionSource,
                   paramValues.mediumDescriptionTarget,
                   paramValues.mediumSerialSource,
@@ -503,7 +507,7 @@ fun loggerInfo(propertyName: String, propertyValue: Any?) {
 
    var value: Any? = propertyValue
    if (value is Collection<*>) {
-      value = value.joinToString(", ", transform = { convertSingle(it).toString() })
+      value = value.joinToString(transform = { convertSingle(it).toString() })
    } else {
       value = convertSingle(value)
    }

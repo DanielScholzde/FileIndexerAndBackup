@@ -80,6 +80,7 @@ data class IndexRun(
       val filePathId: Long, // ID of complete indexed root path
       val path: String, // complete indexed root path  todo path is redundant
       val pathPrefix: String, // drive letter (windows only), may be empty
+      val includedPaths: String,
       val excludedPaths: String,
       val excludedFiles: String,
       val mediumDescription: String?, // description of the medium, e.g. "backup medium 2, 320 GB"

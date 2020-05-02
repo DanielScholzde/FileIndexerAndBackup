@@ -34,6 +34,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
     */
    fun run(sourceDir: File,
            targetDir: File,
+           includedPaths: List<String>,
            mediumDescriptionSource: String?,
            mediumDescriptionTarget: String?,
            mediumSerialSource: String?,
@@ -49,6 +50,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
       } else {
          logger.info("Create index of source directory $sourceDir")
          IndexFiles(sourceDir,
+                    includedPaths,
                     null,
                     mediumDescriptionSource,
                     mediumSerialSource,
@@ -102,6 +104,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
                                        filePath.id,
                                        pathWithoutPrefix,
                                        calcFilePathPrefix(targetSubDir),
+                                       includedPaths.convertToSortedStr(),
                                        newestIndexRunSource.indexRun.excludedPaths,
                                        newestIndexRunSource.indexRun.excludedFiles,
                                        mediumDescriptionTarget,
