@@ -13,7 +13,7 @@ class RemoveIndexTest : BaseTest() {
    fun test1() {
       copyFile("$root/image.jpg", "$root/subdir/image.jpg")
 
-      main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--headless", "--timeZone", "Europe/Berlin", "$root/subdir/")) { pl ->
+      main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--progressWindow:no", "--timeZone", "Europe/Berlin", "$root/subdir/")) { pl ->
          val i1 = pl.db.dbQueryUniqueInt("Select count(*) from FileLocation ")
          val i2 = pl.db.dbQueryUniqueInt("Select count(*) from FileContent ")
          val i3 = pl.db.dbQueryUniqueInt("Select count(*) from FileMeta ")
@@ -48,13 +48,13 @@ class RemoveIndexTest : BaseTest() {
 
       var filePathCount = 0
 
-      main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--headless", "--timeZone", "Europe/Berlin", "$root/subdir/")) { pl ->
+      main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--progressWindow:no", "--timeZone", "Europe/Berlin", "$root/subdir/")) { pl ->
          filePathCount = pl.db.dbQueryUniqueInt("Select count(*) from FilePath ")
       }
 
       copyFile("$root/image.jpg", "$root/subdir/subdir2/image2.jpg")
 
-      main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--headless", "--timeZone", "Europe/Berlin", "$root/subdir/")) { pl ->
+      main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--progressWindow:no", "--timeZone", "Europe/Berlin", "$root/subdir/")) { pl ->
          val i1 = pl.db.dbQueryUniqueInt("Select count(*) from FileLocation ")
          val i2 = pl.db.dbQueryUniqueInt("Select count(*) from FileContent ")
          val i3 = pl.db.dbQueryUniqueInt("Select count(*) from FileMeta ")

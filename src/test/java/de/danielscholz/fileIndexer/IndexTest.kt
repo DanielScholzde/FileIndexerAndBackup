@@ -24,7 +24,7 @@ class IndexTest : BaseTest() {
 
    @Test
    fun indexTest() {
-      main(arrayOf(Commands.INDEX_FILES.command, "--db", ":memory:", "--headless", "$root/")) { pl ->
+      main(arrayOf(Commands.INDEX_FILES.command, "--db", ":memory:", "--progressWindow:no", "$root/")) { pl ->
 
          println(pl.db.queryDebug("Select * from IndexRun "))
          println(pl.db.queryDebug("Select * from FileLocation "))
@@ -129,7 +129,7 @@ class IndexTest : BaseTest() {
 
       createFile("$root/testmodified/a.txt")
 
-      main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--headless", "$root/testmodified/")) { pl ->
+      main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--progressWindow:no", "$root/testmodified/")) { pl ->
 
          assertEquals(1, pl.db.dbQueryUniqueInt("SELECT count(*) FROM FileLocation"))
 

@@ -16,8 +16,8 @@ class SyncFilesTest : BaseTest() {
 
       main(arrayOf(Commands.SYNC_FILES.command,
                    "--db", dbname,
-                   "--headless",
-                   "--silent",
+                   "--progressWindow:no",
+                   "--confirmations:no",
                    "--mediumSerialSource", "S",
                    "--mediumSerialTarget", "T",
                    "--timeZone", "Europe/Berlin",
@@ -41,8 +41,8 @@ class SyncFilesTest : BaseTest() {
 
       main(arrayOf(Commands.SYNC_FILES.command,
                    "--db", dbname,
-                   "--headless",
-                   "--silent",
+                   "--progressWindow:no",
+                   "--confirmations:no",
                    "--timeZone", "Europe/Berlin",
                    "--mediumSerialSource", "S",
                    "--mediumSerialTarget", "T",
@@ -56,8 +56,8 @@ class SyncFilesTest : BaseTest() {
 
       main(arrayOf(Commands.SYNC_FILES.command,
                    "--db", dbname,
-                   "--headless",
-                   "--silent",
+                   "--progressWindow:no",
+                   "--confirmations:no",
                    "--timeZone", "Europe/Berlin",
                    "--mediumSerialSource", "S",
                    "--mediumSerialTarget", "T",

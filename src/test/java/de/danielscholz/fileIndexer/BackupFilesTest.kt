@@ -16,8 +16,8 @@ class BackupFilesTest : BaseTest() {
 
       main(arrayOf(Commands.BACKUP_FILES.command,
                    "--db", dbname,
-                   "--headless",
-                   "--silent",
+                   "--progressWindow:no",
+                   "--confirmations:no",
                    "--mediumSerialSource", "S",
                    "--mediumSerialTarget", "T",
                    "--timeZone", "Europe/Berlin",
@@ -27,6 +27,10 @@ class BackupFilesTest : BaseTest() {
          println(pl.db.queryDebug("Select * from FileContent "))
          println(pl.db.queryDebug("Select * from FilePath "))
       }
+
+      main(arrayOf(Commands.LIST_INDEX_RUNS.command,
+                   "--db", dbname,
+                   "$root/target/"))
    }
 
    @Test
@@ -36,8 +40,8 @@ class BackupFilesTest : BaseTest() {
 
       main(arrayOf(Commands.BACKUP_FILES.command,
                    "--db", dbname,
-                   "--headless",
-                   "--silent",
+                   "--progressWindow:no",
+                   "--confirmations:no",
                    "--timeZone", "Europe/Berlin",
                    "--mediumSerialSource", "S",
                    "--mediumSerialTarget", "T",
@@ -47,8 +51,8 @@ class BackupFilesTest : BaseTest() {
 
       main(arrayOf(Commands.BACKUP_FILES.command,
                    "--db", dbname,
-                   "--headless",
-                   "--silent",
+                   "--progressWindow:no",
+                   "--confirmations:no",
                    "--timeZone", "Europe/Berlin",
                    "--mediumSerialSource", "S",
                    "--mediumSerialTarget", "T",
@@ -73,8 +77,8 @@ class BackupFilesTest : BaseTest() {
 
       main(arrayOf(Commands.BACKUP_FILES.command,
                    "--db", dbname,
-                   "--headless",
-                   "--silent",
+                   "--progressWindow:no",
+                   "--confirmations:no",
                    "--timeZone", "Europe/Berlin",
                    "--mediumSerialSource", "S",
                    "--mediumSerialTarget", "T",
@@ -88,8 +92,8 @@ class BackupFilesTest : BaseTest() {
 
       main(arrayOf(Commands.BACKUP_FILES.command,
                    "--db", dbname,
-                   "--headless",
-                   "--silent",
+                   "--progressWindow:no",
+                   "--confirmations:no",
                    "--timeZone", "Europe/Berlin",
                    "--mediumSerialSource", "S",
                    "--mediumSerialTarget", "T",

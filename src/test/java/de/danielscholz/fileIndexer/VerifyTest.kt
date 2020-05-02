@@ -17,7 +17,7 @@ class VerifyTest : BaseTest() {
       val systemOut = captureSystemOut {
          copyFile("$root/a.txt", "$root/subdir/a.txt")
 
-         main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--headless", "--timeZone", "Europe/Berlin", "$root/subdir")) { pl ->
+         main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--progressWindow:no", "--timeZone", "Europe/Berlin", "$root/subdir")) { pl ->
 //         println(pl.db.queryDebug("Select * from FileLocation "))
 //         println(pl.db.queryDebug("Select * from FileMeta "))
          }
@@ -33,7 +33,7 @@ class VerifyTest : BaseTest() {
       val systemOut = captureSystemOut {
          copyFile("$root/a.txt", "$root/subdir/a.txt")
 
-         main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--headless", "--timeZone", "Europe/Berlin", "$root/subdir")) { pl ->
+         main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--progressWindow:no", "--timeZone", "Europe/Berlin", "$root/subdir")) { pl ->
 //         println(pl.db.queryDebug("Select * from FileLocation "))
 //         println(pl.db.queryDebug("Select * from FileMeta "))
          }
@@ -51,7 +51,7 @@ class VerifyTest : BaseTest() {
       val systemOut = captureSystemOut {
          copyFile("$root/a.txt", "$root/subdir/a.txt")
 
-         main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--headless", "--timeZone", "Europe/Berlin", "$root/subdir"))
+         main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--progressWindow:no", "--timeZone", "Europe/Berlin", "$root/subdir"))
 
          Files.write(File("$root/subdir/a.txt").toPath(), ByteArray(0), StandardOpenOption.TRUNCATE_EXISTING)
 
@@ -66,7 +66,7 @@ class VerifyTest : BaseTest() {
       val systemOut = captureSystemOut {
          copyFile("$root/a.txt", "$root/subdir/a.txt")
 
-         main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--headless", "--timeZone", "Europe/Berlin", "$root/subdir"))
+         main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--progressWindow:no", "--timeZone", "Europe/Berlin", "$root/subdir"))
 
          val file = File("$root/subdir/a.txt")
          val lastModified = file.lastModified()

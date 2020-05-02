@@ -13,10 +13,10 @@ class IndexSubdirTest : BaseTest() {
       createHardlink("$root/testsubindex/a.txt", "$root/testsubindex/subdir1/a.txt")
       createHardlink("$root/testsubindex/a.txt", "$root/testsubindex/subdir2/a.txt")
 
-      main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--headless", "$root/testsubindex/subdir1/"))
-      main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--headless", "$root/testsubindex/subdir2/"))
+      main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--progressWindow:no", "$root/testsubindex/subdir1/"))
+      main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--progressWindow:no", "$root/testsubindex/subdir2/"))
 
-      main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--headless", "--updateHardlinksInLastIndex", "$root/testsubindex/")) { pl ->
+      main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--progressWindow:no", "--updateHardlinksInLastIndex", "$root/testsubindex/")) { pl ->
 
          assertEquals(5, pl.db.dbQueryUniqueInt("SELECT count(*) FROM FileLocation"))
          assertEquals(1, pl.db.dbQueryUniqueInt("SELECT count(*) FROM FileContent"))

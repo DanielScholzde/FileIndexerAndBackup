@@ -15,7 +15,7 @@ class IndexHardlinksTest : BaseTest() {
    fun test1() {
       createHardlink("$root/test1/a.txt", "$root/test1/aa.txt")
 
-      main(arrayOf(Commands.INDEX_FILES.command, "--db", ":memory:", "--headless", "$root/test1/")) { pl ->
+      main(arrayOf(Commands.INDEX_FILES.command, "--db", ":memory:", "--progressWindow:no", "$root/test1/")) { pl ->
 
          assertEquals(2, pl.db.dbQueryUniqueInt("SELECT count(*) FROM FileLocation"))
          assertEquals(1, pl.db.dbQueryUniqueInt("SELECT count(*) FROM FileContent"))
@@ -41,11 +41,11 @@ class IndexHardlinksTest : BaseTest() {
    fun test2_1() {
       createHardlink("$root/test2/001/a.txt", "$root/test2/002/aa.txt")
 
-      main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--headless", "$root/test2/001/"))
+      main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--progressWindow:no", "$root/test2/001/"))
 
       main(arrayOf(Commands.INDEX_FILES.command,
                    "--db", dbname,
-                   "--headless",
+                   "--progressWindow:no",
                    "--updateHardlinksInLastIndex",
                    "--lastIndexDir", "$root/test2/001/",
                    "$root/test2/002/")) { pl ->
@@ -68,13 +68,13 @@ class IndexHardlinksTest : BaseTest() {
 
    @Test
    fun test2_2() {
-      main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--headless", "$root/test2/001/"))
+      main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--progressWindow:no", "$root/test2/001/"))
 
       createHardlink("$root/test2/001/a.txt", "$root/test2/002/aa.txt")
 
       main(arrayOf(Commands.INDEX_FILES.command,
                    "--db", dbname,
-                   "--headless",
+                   "--progressWindow:no",
                    "--lastIndexDir", "$root/test2/001/",
                    "$root/test2/002/")) { pl ->
 
@@ -96,14 +96,14 @@ class IndexHardlinksTest : BaseTest() {
 
    @Test
    fun test2_3() {
-      main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--headless", "$root/test2/001/"))
+      main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--progressWindow:no", "$root/test2/001/"))
 
       createHardlink("$root/test2/001/a.txt", "$root/test2/002/aa.txt")
       createHardlink("$root/test2/001/a.txt", "$root/test2/002/aaa.txt")
 
       main(arrayOf(Commands.INDEX_FILES.command,
                    "--db", dbname,
-                   "--headless",
+                   "--progressWindow:no",
                    "--lastIndexDir", "$root/test2/001/",
                    "$root/test2/002/")) { pl ->
 

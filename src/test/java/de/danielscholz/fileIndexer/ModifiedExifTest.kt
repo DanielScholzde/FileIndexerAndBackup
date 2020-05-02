@@ -15,7 +15,7 @@ class ModifiedExifTest : BaseTest() {
    fun test1() {
       copyFile("$root/image.jpg", "$root/subdir/image.jpg")
 
-      main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--headless", "--timeZone", "Europe/Berlin", "$root/subdir/")) { pl ->
+      main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--progressWindow:no", "--timeZone", "Europe/Berlin", "$root/subdir/")) { pl ->
          println(pl.db.queryDebug("Select * from FileLocation "))
          println(pl.db.queryDebug("Select * from FileMeta "))
       }
