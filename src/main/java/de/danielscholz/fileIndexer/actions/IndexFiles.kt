@@ -172,7 +172,7 @@ class IndexFiles(private val dir: File,
    private fun createIndex(sourceDir: File, parentFilePath: FilePath?): FilePath {
       stat.filesDir = 0
       stat.filesProcessedDir.reset()
-      logger.info("{}", sourceDir)
+      logger.info("index: {}", sourceDir)
 
       val filePath = if (parentFilePath != null) {
          pl.searchOrInsertFilePath(FilePath(0,

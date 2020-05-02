@@ -160,7 +160,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
             val path = it.path.substring(0, it.path.lastIndexOf("/"))
             if (path != currentPath) {
                currentPath = path
-               logger.info(sourceDir.path + currentPath?.replace('/', File.separatorChar))
+               logger.info("backup: " + sourceDir.path + currentPath?.replace('/', File.separatorChar))
             }
             it.action()
          }
