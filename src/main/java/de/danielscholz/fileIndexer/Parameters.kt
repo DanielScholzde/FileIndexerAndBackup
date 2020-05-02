@@ -23,8 +23,8 @@ class IndexFilesParams {
    @Description("Serial number of the medium, will be determined automatically if running under windows")
    var mediumSerial: String? = null
 
-   @Description("Create index archive contents too")
-   var noArchiveContents: Boolean = false
+   @Description("Also create an index of archive contents")
+   var indexArchiveContents: Boolean = true
 
    @Description("Update hardlink attribute in last index layer; leave as is in most use cases")
    var updateHardlinksInLastIndex: Boolean = false
@@ -52,7 +52,7 @@ class SyncFilesParams {
    @Description("Serial number of the target medium, will be determined automatically if running under windows")
    var mediumSerialTarget: String? = null
 
-   @Description("Create index archive contents too")
+   @Description("Also create an index of archive contents")
    var indexArchiveContentsOfSourceDir = false
 
    @Description("Skip create index of source directory. For most applications please do not change this!")
@@ -84,7 +84,7 @@ class BackupFilesParams {
    @Description("Serial number of the target medium, will be determined automatically if running under windows")
    var mediumSerialTarget: String? = null
 
-   @Description("Create index archive contents too")
+   @Description("Also create an index of archive contents")
    var indexArchiveContentsOfSourceDir = false
 
    @Description("Skip create index of source directory. For most applications please do not change this!")

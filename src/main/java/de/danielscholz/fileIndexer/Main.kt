@@ -157,7 +157,7 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
                addConfigParamsForIndexFiles()
                add(paramValues::mediumDescription, StringParam())
                add(paramValues::mediumSerial, StringParam())
-               add(paramValues::noArchiveContents, BooleanParam())
+               add(paramValues::indexArchiveContents, BooleanParam())
                add(paramValues::updateHardlinksInLastIndex, BooleanParam())
                add(paramValues::lastIndexDir, FileParam())
                add(paramValues::readConfig, ReadConfigParam())
@@ -169,7 +169,7 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
                           paramValues.lastIndexDir?.canonicalFile,
                           paramValues.mediumDescription,
                           paramValues.mediumSerial,
-                          !paramValues.noArchiveContents,
+                          paramValues.indexArchiveContents,
                           paramValues.updateHardlinksInLastIndex,
                           paramValues.readConfig,
                           pl).run()
