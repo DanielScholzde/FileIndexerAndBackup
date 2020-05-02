@@ -36,7 +36,7 @@ class ChunkCreator(private val fileSize: Long) {
    private var posForEnd = 0L
    private var chunksOffsetBegin = 0L
    private var chunksOffsetEnd = 0L
-   private var activeBegin = true
+   private var activeBegin = fileSize >= minimumChunkSize * 2
    private var activeEnd = false
    private var startForEnd = -1L
    private val encoder = Base64.getEncoder()

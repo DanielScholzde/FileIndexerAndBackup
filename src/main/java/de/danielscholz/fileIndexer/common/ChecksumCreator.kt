@@ -77,6 +77,9 @@ class ChecksumCreator(private val inputStreamWrapper: InputStreamWrapper,
          if (sha1ChunksFromEnd.isNotEmpty()) throw IllegalStateException()
          sha1ChunksFromEnd = sha1ChunksFromBegin
       }
+      if (sha1ChunksFromEnd.isEmpty()) {
+         throw IllegalStateException()
+      }
       return Checksum(chunkCreator.sha1!!, sha1ChunksFromBegin, sha1ChunksFromEnd)
    }
 }
