@@ -3,6 +3,7 @@ package de.danielscholz.fileIndexer.common
 import com.google.common.collect.*
 import de.danielscholz.fileIndexer.Config
 import de.danielscholz.fileIndexer.Global
+import de.danielscholz.fileIndexer.GlobalParams
 import de.danielscholz.fileIndexer.persistence.FileLocation
 import de.danielscholz.fileIndexer.persistence.common.Database
 import org.slf4j.Logger
@@ -261,35 +262,55 @@ fun getVolumeSerialNr(dir: File, mediumSerialParam: String?): String {
    return mediumSerialDetermined
 }
 
+fun GlobalParams.getCopy(): GlobalParams {
+   val globalParams = GlobalParams()
+   copyProperties(this, globalParams)
+   return globalParams
+}
+
 fun Config.getCopy(): Config {
    val config = Config()
-   val map = mutableMapOf<String, Any?>()
-   for (declaredMemberProperty in this::class.declaredMemberProperties) {
-      val obj = declaredMemberProperty.getter.call(this)
-      map[declaredMemberProperty.name] = obj
-   }
-   for (declaredMemberProperty in config::class.declaredMemberProperties) {
-      if (declaredMemberProperty is KMutableProperty<*>) {
-         if (!map.containsKey(declaredMemberProperty.name)) throw java.lang.IllegalStateException()
-         val obj = map[declaredMemberProperty.name]
-         declaredMemberProperty.setter.call(config, obj)
-      } // else throw IllegalStateException("${declaredMemberProperty.name} is not writeable")
-   }
+   copyProperties(this, config)
    return config
 }
 
-fun Config.getDiffTo(config: Config): List<Pair<String, Any?>> {
+fun <T : Any> copyProperties(from: T, to: T) {
    val map = mutableMapOf<String, Any?>()
-   for (declaredMemberProperty in this::class.declaredMemberProperties) {
-      val obj = declaredMemberProperty.getter.call(this)
-      map[declaredMemberProperty.name] = obj
+   for (declaredMemberProperty in from::class.declaredMemberProperties) {
+      if (declaredMemberProperty is KMutableProperty<*>) {
+         val value = declaredMemberProperty.getter.call(from)
+         map[declaredMemberProperty.name] = value
+      }
+   }
+   for (declaredMemberProperty in to::class.declaredMemberProperties) {
+      if (declaredMemberProperty is KMutableProperty<*>) {
+         if (!map.containsKey(declaredMemberProperty.name)) throw IllegalStateException()
+         val value = map[declaredMemberProperty.name]
+         declaredMemberProperty.setter.call(to, value)
+      }
+   }
+}
+
+fun GlobalParams.getDiffTo(globalParams: GlobalParams): List<Pair<String, Any?>> {
+   return getDiff(this, globalParams)
+}
+
+fun Config.getDiffTo(config: Config): List<Pair<String, Any?>> {
+   return getDiff(this, config)
+}
+
+fun <T : Any> getDiff(obj1: T, obj2: T): List<Pair<String, Any?>> {
+   val map = mutableMapOf<String, Any?>()
+   for (declaredMemberProperty in obj1::class.declaredMemberProperties) {
+      val value1 = declaredMemberProperty.getter.call(obj1)
+      map[declaredMemberProperty.name] = value1
    }
    val result = mutableListOf<Pair<String, Any?>>()
-   for (declaredMemberProperty in config::class.declaredMemberProperties) {
-      val obj1 = map[declaredMemberProperty.name]
-      val obj2 = declaredMemberProperty.getter.call(config)
-      if (obj1 != obj2) {
-         result.add(declaredMemberProperty.name to obj1)
+   for (declaredMemberProperty in obj2::class.declaredMemberProperties) {
+      val value1 = map[declaredMemberProperty.name]
+      val value2 = declaredMemberProperty.getter.call(obj2)
+      if (value1 != value2) {
+         result.add(declaredMemberProperty.name to value1)
       }
    }
    return result

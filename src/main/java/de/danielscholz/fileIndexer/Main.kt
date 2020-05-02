@@ -25,22 +25,27 @@ import kotlin.reflect.KProperty0
 private val logger = LoggerFactory.getLogger("Main")
 
 fun main(args: Array<String>) {
-   main(args, {}, {})
+   main(args, true)
 }
 
 /**
  * @param args program arguments
- * @param runBefore Action that is called before the main program. Does not take place within a transaction!
- * @param runAfter Action that is called after the main program. Does not take place within a transaction!
+ * @param runBeforeCmd Action that is called before the main program. Does not take place within a transaction!
+ * @param runAfterCmd Action that is called after the main program. Does not take place within a transaction!
  */
-internal fun main(args: Array<String>, runBefore: (PersistenceLayer) -> Unit = {}, runAfter: (PersistenceLayer) -> Unit = {}) {
+internal fun main(args: Array<String>,
+                  toplevel: Boolean = true,
+                  runBeforeArgParsing: () -> Unit = {},
+                  runAfterArgParsing: () -> Unit = {},
+                  runBeforeCmd: (PersistenceLayer) -> Unit = {},
+                  runAfterCmd: (PersistenceLayer) -> Unit = {}) {
    registerShutdownCallback {
       Global.cancel = true
       (LoggerFactory.getILoggerFactory() as LoggerContext).stop()
    }
    registerLowMemoryListener()
 
-   val parser = createParser(true) { globalParams: GlobalParams, command: (PersistenceLayer) -> Unit ->
+   val parser = createParser(toplevel) { globalParams: GlobalParams, command: (PersistenceLayer) -> Unit ->
       if (globalParams.db == null) globalParams.db = File("IndexedFiles")
       val inMemoryDb = globalParams.db!!.name == ":memory:"
       if (!inMemoryDb) {
@@ -68,9 +73,9 @@ internal fun main(args: Array<String>, runBefore: (PersistenceLayer) -> Unit = {
             if (Config.INST.dryRun) {
                logger.info("-------- Dry run, no write changes are made to files ---------")
             }
-            runBefore(pl)
+            runBeforeCmd(pl)
             command(pl)
-            runAfter(pl)
+            runAfterCmd(pl)
          } else {
             logger.error("The version of the database ${db.dbVersion} does not match the current program version (${Global.programVersion}). Please update the program.")
          }
@@ -81,7 +86,9 @@ internal fun main(args: Array<String>, runBefore: (PersistenceLayer) -> Unit = {
 
    try {
       if (!demandedHelp(args, parser)) {
+         runBeforeArgParsing()
          parser.parseArgs(args)
+         runAfterArgParsing()
       }
    } catch (e: ArgParseException) {
       logger.info(parser.printout(e))
@@ -111,23 +118,7 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
    }
 
    fun loggerInfo(property: KProperty0<*>) {
-      fun convertSingle(value: Any?): String? {
-         if (value is String) return "\"$value\""
-         if (value is Boolean) return BooleanParam().convertToStr(value)
-         if (value is File) return FileParam().convertToStr(value)
-         if (value is TimeZone) return TimeZoneParam().convertToStr(value)
-         if (value is IntRange) return IntRangeParam().convertToStr(value)
-         if (value is IndexFiles.ReadConfig) return ReadConfigParam().convertToStr(value)
-         return if (value != null) value.toString() else ""
-      }
-
-      var value: Any? = property.get()
-      if (value is Collection<*>) {
-         value = value.joinToString(", ", transform = { convertSingle(it).toString() })
-      } else {
-         value = convertSingle(value)
-      }
-      logger.info("${property.name} = $value")
+      loggerInfo(property.name, property.get())
    }
 
    return ArgParserBuilder(GlobalParams()).buildWith(ArgParserConfig(ignoreCase = true, noPrefixForActionParams = true)) {
@@ -137,9 +128,8 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
          logger.info(printout())
       }
 
-      if (toplevel) {
-         add(globalParams::db, FileParam())
-      }
+
+      add(globalParams::db, FileParam())
       add(Config.INST::dryRun, BooleanParam())
       add(Config.INST::verbose, BooleanParam())
       add(Config.INST::progressWindow, BooleanParam())
@@ -154,9 +144,8 @@ private fun createParser(toplevel: Boolean, outerCallback: (GlobalParams, (Persi
             if (console == null) {
                logger.error("Console not supported!")
             } else {
-               outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
-                  processConsoleInputs(console, pl)
-               }
+               // do not call outerCallback, because we don't want to open a database yet
+               processConsoleInputs(console, globalParams)
             }
          }
       }
@@ -460,7 +449,7 @@ private fun demandedHelp(args: Array<String>, parser: ArgParser<GlobalParams>): 
    return false
 }
 
-private fun processConsoleInputs(console: Console, pl: PersistenceLayer) {
+private fun processConsoleInputs(console: Console, globalParams: GlobalParams) {
    while (true) {
       if (Global.cancel) break
       print("> ")
@@ -471,38 +460,51 @@ private fun processConsoleInputs(console: Console, pl: PersistenceLayer) {
          continue
       } else {
          var commandProcessed = false
-         val parser = createParser(false) { globalParams: GlobalParams, command: (PersistenceLayer) -> Unit ->
-            try {
-               command(pl)
-               commandProcessed = true
-            } catch (e: Exception) {
-               e.printStackTrace()
-               pl.db.rollback()
-            }
-         }
-         try {
-            val args = arguments.toTypedArray()
-            if (!demandedHelp(args, parser)) {
-               val configCopy = Config.INST.getCopy()
+         var configCopy = Config.INST // do not create a copy yet; it is to early
+         var globalParamsCopy = globalParams
 
-               parser.parseArgs(args)
-
-               // restore settings if a command like "index", "sync" was processed
-               // if only settings were changed (not in combination with a command), keep them
-               if (commandProcessed) {
-                  Config.INST = configCopy
-               } else {
-                  val changed = Config.INST.getDiffTo(configCopy).map { "${it.first} = ${it.second}" }.joinToString("\n")
-                  if (changed.isNotEmpty()) {
-                     logger.info(changed)
-                  }
-               }
-            }
-         } catch (e: ArgParseException) {
-            logger.info(parser.printout(e))
-         }
+         main(arguments.toTypedArray(),
+              false,
+              {
+                 configCopy = Config.INST.getCopy()
+                 globalParamsCopy = globalParams.getCopy()
+              },
+              {
+                 // restore settings if a command like "index", "sync" was processed
+                 // if only settings were changed (not in combination with a command), keep them
+                 if (commandProcessed) {
+                    copyProperties(globalParamsCopy, globalParams)
+                    copyProperties(configCopy, Config.INST)
+                 } else {
+                    globalParams.getDiffTo(globalParamsCopy).forEach { loggerInfo(it.first, it.second) }
+                    Config.INST.getDiffTo(configCopy).forEach { loggerInfo(it.first, it.second) }
+                 }
+              },
+              {},
+              { commandProcessed = true }
+         )
       }
    }
+}
+
+fun loggerInfo(propertyName: String, propertyValue: Any?) {
+   fun convertSingle(value: Any?): String? {
+      if (value is String) return "\"$value\""
+      if (value is Boolean) return BooleanParam().convertToStr(value)
+      if (value is File) return FileParam().convertToStr(value)
+      if (value is TimeZone) return TimeZoneParam().convertToStr(value)
+      if (value is IntRange) return IntRangeParam().convertToStr(value)
+      if (value is IndexFiles.ReadConfig) return ReadConfigParam().convertToStr(value)
+      return if (value != null) value.toString() else ""
+   }
+
+   var value: Any? = propertyValue
+   if (value is Collection<*>) {
+      value = value.joinToString(", ", transform = { convertSingle(it).toString() })
+   } else {
+      value = convertSingle(value)
+   }
+   logger.info("${propertyName} = $value")
 }
 
 // todo auto_vacuum
