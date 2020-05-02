@@ -98,7 +98,8 @@ suspend fun readAllDirInfos(dir: File, scanArchiveContents: Boolean, includePath
 
    class Path(val path: String, val originalPath: String, var used: Boolean = false)
 
-   fun List<Path>.removeFirstPath(): List<Path> {
+   fun List<Path>.removeFirstPathElement(): List<Path> {
+      if (this.isEmpty()) return this
       return this.mapNotNull {
          val s = it.path.removePrefix("/").removeSuffix("/")
          if (s.contains('/')) Path(s.substring(s.indexOf('/') + 1), it.originalPath) else null
@@ -112,13 +113,17 @@ suspend fun readAllDirInfos(dir: File, scanArchiveContents: Boolean, includePath
             val name = fileEntry.name
             val attributes = Files.readAttributes(fileEntry.toPath(), BasicFileAttributes::class.java, LinkOption.NOFOLLOW_LINKS)
             if (attributes.isDirectory) {
-               if (includePaths.isEmpty() || includePaths.any {
-                        val b = it.path.equals(name, !result.caseSensitive) || it.path.startsWith(name + "/", !result.caseSensitive)
-                        if (b) it.used = true
-                        b
-                     }) {
+               var matched = listOf<Path>()
+               if (includePaths.isNotEmpty()) {
+                  matched = includePaths.filter {
+                     val b = it.path.equals(name, !result.caseSensitive) || it.path.startsWith(name + "/", !result.caseSensitive)
+                     if (b) it.used = true
+                     b
+                  }
+               }
+               if (includePaths.isEmpty() || matched.isNotEmpty()) {
                   if (!isExcludedDir(fileEntry, result.caseSensitive, result.excluded)) {
-                     readDirIntern(fileEntry, includePaths.removeFirstPath())
+                     readDirIntern(fileEntry, matched.removeFirstPathElement())
                   }
                }
             } else if (attributes.isRegularFile) {
@@ -149,7 +154,9 @@ suspend fun readAllDirInfos(dir: File, scanArchiveContents: Boolean, includePath
          }
       }
       val list = includePaths.filter { !it.used }.map { it.originalPath }
-      if (list.isNotEmpty()) throw Exception("Some includedPaths entries don't match an existing path: ${list.joinToString()}")
+      if (list.isNotEmpty()) {
+         throw Exception("Some includedPaths entries don't match an existing path: ${list.joinToString()}")
+      }
    }
 
    readDirIntern(dir, includePaths.map { Path(it, it) })
