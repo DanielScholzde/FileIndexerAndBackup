@@ -196,14 +196,14 @@ operator fun <T> Iterator<T>.plus(other: Iterator<T>): Iterator<T> {
 
       override fun hasNext(): Boolean {
          if (first) {
-            if (this.hasNext()) return true
+            if (this@plus.hasNext()) return true
             first = false
          }
          return other.hasNext()
       }
 
       override fun next(): T {
-         if (first) return this.next()
+         if (first) return this@plus.next()
          return other.next()
       }
    }
