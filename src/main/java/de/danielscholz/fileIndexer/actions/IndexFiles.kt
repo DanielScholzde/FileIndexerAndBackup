@@ -250,7 +250,7 @@ class IndexFiles(private val dir: File,
                   },
                   { exception ->
                      Global.stat.failedFileReads.add(Pair(file, exception.message))
-                     logger.warn("Content of file could not be read: $file", exception)
+                     logger.warn("WARN: Content of archive could not be read: $file", exception)
                   })
 
             processFile(file, filePath, archiveRead, true)
@@ -287,7 +287,7 @@ class IndexFiles(private val dir: File,
          }
       } catch (e: IOException) {
          Global.stat.failedFileReads.add(Pair(file, e.message))
-         logger.warn("File could not be read: $file", e)
+         logger.error("ERROR: $file: File could not be read. {}: {}", e.javaClass.name, e.message)
       }
    }
 
@@ -303,9 +303,7 @@ class IndexFiles(private val dir: File,
                                          archiveRead: Boolean,
                                          alreadyWithinReadSemaphore: Boolean) {
       synchronized(filename, fileSize) {
-         if (Config.INST.verbose) {
-            logger.debug("START process: $filename, file size: $fileSize ${(inArchive.ifTrue("(archive: $archiveName)", ""))}")
-         }
+         logger.trace("START process: {}, file size: {} {}", filename, fileSize, inArchive.ifTrue("(archive: $archiveName)", "")) // todo
 
          var fileContentId: Long? = null
          var referenceInode: Long? = null
@@ -355,9 +353,7 @@ class IndexFiles(private val dir: File,
             stat.indexedFilesSizeNoArchive += fileSize
          }
 
-         if (Config.INST.verbose) {
-            logger.debug("END   process: $filename, file size: $fileSize")
-         }
+         logger.trace("END   process: $filename, file size: $fileSize")
       }
    }
 
@@ -469,11 +465,15 @@ class IndexFiles(private val dir: File,
                         checksum.sha1ChunksFromEnd.joinToString(",")))
 
       if (lazyImgContent != null && lazyImgContent.isInitialized()) {
-         val imgAttr = extractExifOriginalDateAndDimension(lazyImgContent.value, Config.INST.timeZone)
-         if (imgAttr.originalDate != null || imgAttr.width != null) {
-            pl.insertIntoFileMeta(FileMeta(0, pl, fileContent.id, imgAttr.width, imgAttr.height, imgAttr.originalDate))
+         try {
+            val imgAttr = extractExifOriginalDateAndDimension(lazyImgContent.value, Config.INST.timeZone)
+            if (imgAttr.originalDate != null || imgAttr.width != null) {
+               pl.insertIntoFileMeta(FileMeta(0, pl, fileContent.id, imgAttr.width, imgAttr.height, imgAttr.originalDate))
+            }
+            //logger.info("$filename: ${imgAttr.width}x${imgAttr.height} ${imgAttr.originalDate?.formatDE()}")
+         } catch (e: Exception) {
+            logger.warn("WARN: $filePath/$filename: EXIF infos could not be read. {}: {}", e.javaClass.name, e.message)
          }
-         //logger.info("$filename: ${imgAttr.width}x${imgAttr.height} ${imgAttr.originalDate?.formatDE()}")
          if (Config.INST.createThumbnails) {
             saveThumbnail(extension, lazyImgContent.value, fileContent.id)
          }
@@ -635,7 +635,7 @@ class IndexFiles(private val dir: File,
    private suspend fun <T> synchronized(filename: String, fileSize: Long, block: suspend () -> T): T {
       // ATTENTION: which lock to consider is determined by fileSize
       val id = fileSize.toByte().toInt().absoluteValue % mutex.size
-      logger.debug("Mutex {} acquire with file size {}", id, fileSize)
+      logger.trace("Mutex {} acquire with file size {}", id, fileSize)
       mutex[id].withLock(filename) {
          return block()
       }
@@ -697,26 +697,26 @@ class IndexFiles(private val dir: File,
    }
 
    private suspend inline fun <T> Semaphore.withPermit(semaphoreName: String, filename: String, action: () -> T): T {
-      logger.debug("Semaphore {} {} permit acquire", semaphoreName, filename)
+      logger.trace("Semaphore {} {} permit acquire", semaphoreName, filename)
       acquire()
-      logger.debug("Semaphore {} {} permit acquired", semaphoreName, filename)
+      logger.trace("Semaphore {} {} permit acquired", semaphoreName, filename)
       try {
          return action()
       } finally {
-         logger.debug("Semaphore {} {} permit release", semaphoreName, filename)
+         logger.trace("Semaphore {} {} permit release", semaphoreName, filename)
          release()
-         logger.debug("Semaphore {} {} permit released", semaphoreName, filename)
+         logger.trace("Semaphore {} {} permit released", semaphoreName, filename)
       }
    }
 
    private suspend inline fun <T> Mutex.withLock(name: String, action: () -> T): T {
-      logger.debug("Mutex {} permit acquire", name)
+      logger.trace("Mutex {} permit acquire", name)
       lock()
-      logger.debug("Mutex {} permit acquired", name)
+      logger.trace("Mutex {} permit acquired", name)
       try {
          return action()
       } finally {
-         logger.debug("Mutex {} permit release", name)
+         logger.trace("Mutex {} permit release", name)
          unlock()
       }
    }

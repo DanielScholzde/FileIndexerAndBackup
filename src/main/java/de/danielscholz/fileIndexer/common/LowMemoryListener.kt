@@ -10,6 +10,8 @@ import javax.management.NotificationEmitter
 import javax.management.NotificationListener
 import kotlin.math.floor
 
+private val logger = LoggerFactory.getLogger(LowMemoryListener::class.java)
+
 class LowMemoryListener(private val max: Long, private val threshold: Long) : NotificationListener {
 
    private val logger = LoggerFactory.getLogger(this.javaClass)
@@ -32,6 +34,7 @@ fun registerLowMemoryListener() {
    val tenuredGenPool = ManagementFactory.getMemoryPoolMXBeans().firstOrNull {
       it.type == MemoryType.HEAP && it.isUsageThresholdSupported
    }
+
    if (tenuredGenPool != null) {
       val max = tenuredGenPool.usage.max
       val threshold = floor(max * 0.9).toLong() // we do something when we reached 90% of memory usage
@@ -40,5 +43,7 @@ fun registerLowMemoryListener() {
       val notificationEmitter = ManagementFactory.getMemoryMXBean() as NotificationEmitter
       notificationEmitter.addNotificationListener(LowMemoryListener(max, threshold), null, null)
       registered = true
+
+      logger.debug("LowMemoryListener successfully registered. Max available Memory: ${max.formatAsFileSize()}, Threshold: ${threshold.formatAsFileSize()}")
    }
 }

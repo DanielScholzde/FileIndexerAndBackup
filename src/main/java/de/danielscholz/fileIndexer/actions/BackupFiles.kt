@@ -324,7 +324,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
       if (!Config.INST.dryRun) {
          newBackupFile.parentFile.mkdirs()
          Files.copy(sourceFile.toPath(), newBackupFile.toPath(), StandardCopyOption.COPY_ATTRIBUTES)
-         logger.trace("copy: $sourceFile --> $newBackupFile")
+         logger.debug("copy: $sourceFile --> $newBackupFile")
          Global.createdFilesCallback(newBackupFile)
       }
 
@@ -362,7 +362,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
       if (!Config.INST.dryRun) {
          newBackupFile.parentFile.mkdirs()
          Files.createLink(newBackupFile.toPath(), existingBackupFile.toPath())
-         logger.trace("link: $existingBackupFile --> $newBackupFile")
+         logger.debug("link: $existingBackupFile --> $newBackupFile")
          Global.createdFilesCallback(newBackupFile)
 
          if (existingBackupFileLocation.referenceInode == null) {

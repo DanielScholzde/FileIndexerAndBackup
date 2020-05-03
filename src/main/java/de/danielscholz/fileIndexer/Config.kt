@@ -61,6 +61,9 @@ class Config {
    @Description("Should more information be printed to console?")
    var verbose = false
 
+   @Description("Adjust the log level. Possible values are: info, debug, trace")
+   var logLevel: String = "info"
+
    // For backup or sync
    @Description("Maximum of allowed file changes in percent. If more files changed, a confirmation popup window will appear (can be disabled with parameter '--silent').")
    var maxChangedFilesWarningPercent = 5

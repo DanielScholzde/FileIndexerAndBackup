@@ -137,7 +137,7 @@ suspend fun readAllDirInfos(dir: File, scanArchiveContents: Boolean, includePath
                               result.size += archiveEntry.size
                            },
                            { exception ->
-                              logger.warn("$fileEntry: Content of file could not be read. {}: {}", exception.javaClass.name, exception.message)
+                              logger.warn("WARN: $fileEntry: Content of archive could not be read. {}: {}", exception.javaClass.name, exception.message)
                            }
                      )
                   }
@@ -155,7 +155,7 @@ suspend fun readAllDirInfos(dir: File, scanArchiveContents: Boolean, includePath
       }
       val list = includePaths.filter { !it.used }.map { it.originalPath }
       if (list.isNotEmpty()) {
-         throw Exception("Some includedPaths entries don't match an existing path: ${list.joinToString()}")
+         throw Exception("Some includedPaths don't match an existing path: ${list.joinToString()}")
       }
    }
 

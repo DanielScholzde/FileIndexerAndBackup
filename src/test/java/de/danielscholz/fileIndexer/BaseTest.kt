@@ -123,13 +123,13 @@ open class BaseTest(val dbname: String = "target/test-classes/test.db") {
       File(dbname).delete()
 
       createdFiles.forEach {
-         if (it.delete()) logger.trace("$it gelöscht") else
+         if (it.delete()) logger.debug("$it gelöscht") else
             if (it.exists()) fail("Datei konnte nicht gelöscht werden: $it")
       }
       createdFiles.clear()
 
       createdDirs.reversed().forEach {
-         if (it.delete()) logger.trace("$it gelöscht") else
+         if (it.delete()) logger.debug("$it gelöscht") else
             if (it.exists()) fail("Verzeichnis konnte nicht gelöscht werden: $it")
       }
       createdDirs.clear()

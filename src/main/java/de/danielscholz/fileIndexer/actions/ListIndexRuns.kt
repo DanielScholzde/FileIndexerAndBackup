@@ -24,7 +24,7 @@ class ListIndexRuns(private val pl: PersistenceLayer) {
          list.forEach {
             logger.info(format(it.indexRun, maxIdStrLength))
          }
-         if (Config.INST.verbose && list.isEmpty()) {
+         if (list.isEmpty()) {
             logger.info("The directory $dir has no indexed files")
          }
       }

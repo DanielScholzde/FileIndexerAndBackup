@@ -51,6 +51,16 @@ fun registerShutdownCallback(exitCallback: () -> Unit) {
    })
 }
 
+fun setRootLoggerLevel() {
+   val rootLogger = LoggerFactory.getLogger(ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME) as ch.qos.logback.classic.Logger
+   rootLogger.level = when (Config.INST.logLevel.toLowerCase()) {
+      "info"  -> ch.qos.logback.classic.Level.INFO
+      "debug" -> ch.qos.logback.classic.Level.DEBUG
+      "trace" -> ch.qos.logback.classic.Level.TRACE
+      else    -> rootLogger.level
+   }
+}
+
 /**
  * z.B. C:
  */

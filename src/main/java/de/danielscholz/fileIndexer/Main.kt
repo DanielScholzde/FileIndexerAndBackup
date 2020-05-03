@@ -1,6 +1,7 @@
 package de.danielscholz.fileIndexer
 
-import ch.qos.logback.classic.LoggerContext
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
 import de.danielscholz.fileIndexer.actions.*
 import de.danielscholz.fileIndexer.common.*
 import de.danielscholz.fileIndexer.persistence.PersistenceLayer
@@ -42,11 +43,13 @@ internal fun main(args: Array<String>,
                   runAfterCmd: (PersistenceLayer) -> Unit = {}) {
    registerShutdownCallback {
       Global.cancel = true
-      (LoggerFactory.getILoggerFactory() as LoggerContext).stop()
+      (LoggerFactory.getILoggerFactory() as ch.qos.logback.classic.LoggerContext).stop()
    }
-   registerLowMemoryListener()
 
    val parser = createParser(toplevel, parentGlobalParams) { globalParams: GlobalParams, command: (PersistenceLayer) -> Unit ->
+      setRootLoggerLevel()
+      registerLowMemoryListener()
+
       if (globalParams.db == null) globalParams.db = File("IndexedFiles")
       val inMemoryDb = globalParams.db!!.name == ":memory:"
       if (!inMemoryDb) {
@@ -57,7 +60,7 @@ internal fun main(args: Array<String>,
          }
       }
 
-      if (Config.INST.verbose) logger.debug("Database: ${globalParams.db}")
+      logger.debug("Database: ${globalParams.db}")
       Database(globalParams.db.toString()).tryWith { db ->
          val pl = PersistenceLayer(db)
          if (pl.db.dbQueryUniqueStr("PRAGMA integrity_check").toLowerCase() != "ok") {
@@ -133,6 +136,7 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
       add(globalParams::db, FileParam())
       add(Config.INST::dryRun, BooleanParam())
       add(Config.INST::verbose, BooleanParam())
+      add(Config.INST::logLevel, StringParam())
       add(Config.INST::progressWindow, BooleanParam())
       add(Config.INST::confirmations, BooleanParam())
       add(Config.INST::excludedPaths, StringSetParam(mapper = { it.replace('\\', '/') }, typeDescription = ""))
