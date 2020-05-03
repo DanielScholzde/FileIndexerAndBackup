@@ -198,6 +198,8 @@
                                     <mainClass>${main.class}</mainClass>
                                 </manifest>
                             </archive>
+                            <finalName>FileIndexerAndBackup</finalName>
+                            <appendAssemblyId>false</appendAssemblyId>
                             <descriptorRefs>
                                 <descriptorRef>jar-with-dependencies</descriptorRef>
                             </descriptorRefs>

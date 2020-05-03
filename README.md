@@ -44,11 +44,11 @@ Technical information:
 customizable identity definition
 - all operations can be simulated with the parameter "dryRun"
 - sync und backup can be configured to ask for confirmation if a specific amount of file changes is exceeded
-- designed using the fail-fast principle
+- designed using the DRY (do not repeat yourself) and the fail-fast principle (this does not mean that backup process is aborted immediately in case of file access errors)
 
 Examples:
 
-    java -jar FileIndexerAndBackup.jar backup --db backupIndex.db /my/sourcePath /my/backup/targetPath
+    java -jar FileIndexerAndBackup.jar backup --db backupIndex.db /sourcePath /backup/targetPath
     
 Integrated console:
 
@@ -56,7 +56,7 @@ Integrated console:
     > --dryRun --verbose
     dryRun = true
     verbose = true
-    > backupIndex.db /my/sourcePath /my/backup/targetPath
+    > backupIndex.db /sourcePath /backup/targetPath
     ...
     > exit
     
@@ -64,3 +64,8 @@ Find duplicates and delete them (example for pipelining of commands and filters)
 
     findDuplicates /reference/path /path/to/search/for/duplicates | filter **.jpg | print --folderOnly:false | delete
    
+#### How to build this application
+You need Maven, a JDK 1.8+ and my other project 'KArgParser'.\
+First build the project KArgParser: mvn clean install\
+After that you can build this project: mvn clean package\
+Then you can start the integrated console: java -jar target/FileIndexerAndBackup.jar console
