@@ -46,40 +46,10 @@ fun readDir(dir: File, caseSensitive: Boolean): FolderResult {
    return FolderResult(folders, files)
 }
 
-private fun isExcludedFile(fileEntry: File, caseSensitive: Boolean, stats: Excluded?): Boolean {
-   val name = '/' + fileEntry.name + "/"
 
-   for (excludedFile in Config.INST.excludedFiles.iterator() + Config.INST.defaultExcludedFiles.iterator()) {
-      if (name.contains(excludedFile, !caseSensitive)) {
-         stats?.excludedFilesUsed?.add(excludedFile)
-         return true
-      }
-   }
-   return false
-}
+class Excluded(val excludedPathsUsed: MutableSet<String>, val excludedFilesUsed: MutableSet<String>)
 
-private fun isExcludedDir(fileEntry: File, caseSensitive: Boolean, stats: Excluded?): Boolean {
-   val path = fileEntry.canonicalPath.replace('\\', '/').ensureSuffix("/")
-   val pathWithoutPrefix = myLazy { calcPathWithoutPrefix(fileEntry.canonicalFile) }
-
-   for (excludedPath in Config.INST.excludedPaths.iterator() + Config.INST.defaultExcludedPaths.iterator()) {
-      if (excludedPath.startsWith("//")) {
-         if (pathWithoutPrefix.value.startsWith(excludedPath.substring(1), !caseSensitive)) {
-            stats?.excludedPathsUsed?.add(excludedPath)
-            return true
-         }
-      } else if (path.contains(excludedPath, !caseSensitive)) {
-         stats?.excludedPathsUsed?.add(excludedPath)
-         return true
-      }
-   }
-   return false
-}
-
-data class Excluded(val excludedPathsUsed: MutableSet<String>, val excludedFilesUsed: MutableSet<String>)
-
-data class DirInfosResult(var files: Int, var size: Long, var caseSensitive: Boolean, val excluded: Excluded)
-
+class DirInfosResult(var files: Int, var size: Long, var caseSensitive: Boolean, val excluded: Excluded)
 
 fun readAllDirInfos(dir: File, scanArchiveContents: Boolean, includePaths: List<String> = listOf()): DirInfosResult {
 
@@ -164,6 +134,37 @@ fun readAllDirInfos(dir: File, scanArchiveContents: Boolean, includePaths: List<
 
    logger.info("${result.files} files read (${result.size.formatAsFileSize()})")
    return result
+}
+
+
+private fun isExcludedFile(fileEntry: File, caseSensitive: Boolean, stats: Excluded?): Boolean {
+   val name = '/' + fileEntry.name + "/"
+
+   for (excludedFile in Config.INST.excludedFiles.iterator() + Config.INST.defaultExcludedFiles.iterator()) {
+      if (name.contains(excludedFile, !caseSensitive)) {
+         stats?.excludedFilesUsed?.add(excludedFile)
+         return true
+      }
+   }
+   return false
+}
+
+private fun isExcludedDir(fileEntry: File, caseSensitive: Boolean, stats: Excluded?): Boolean {
+   val path = fileEntry.canonicalPath.replace('\\', '/').ensureSuffix("/")
+   val pathWithoutPrefix = myLazy { calcPathWithoutPrefix(fileEntry.canonicalFile) }
+
+   for (excludedPath in Config.INST.excludedPaths.iterator() + Config.INST.defaultExcludedPaths.iterator()) {
+      if (excludedPath.startsWith("//")) {
+         if (pathWithoutPrefix.value.startsWith(excludedPath.substring(1), !caseSensitive)) {
+            stats?.excludedPathsUsed?.add(excludedPath)
+            return true
+         }
+      } else if (path.contains(excludedPath, !caseSensitive)) {
+         stats?.excludedPathsUsed?.add(excludedPath)
+         return true
+      }
+   }
+   return false
 }
 
 
