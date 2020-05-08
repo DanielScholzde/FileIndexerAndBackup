@@ -80,6 +80,9 @@ class ChecksumCreator(private val inputStreamWrapper: InputStreamWrapper,
       if (sha1ChunksFromEnd.isEmpty()) {
          throw IllegalStateException()
       }
+      if (chunkCreator.sha1 == null) { // this is the case when file size changed during read operation
+         throw FileSizeChangedException()
+      }
       return Checksum(chunkCreator.sha1!!, sha1ChunksFromBegin, sha1ChunksFromEnd)
    }
 }

@@ -1,7 +1,5 @@
 package de.danielscholz.fileIndexer
 
-import ch.qos.logback.classic.Level
-import ch.qos.logback.classic.Logger
 import de.danielscholz.fileIndexer.actions.*
 import de.danielscholz.fileIndexer.common.*
 import de.danielscholz.fileIndexer.persistence.PersistenceLayer
@@ -522,3 +520,4 @@ fun loggerInfo(propertyName: String, propertyValue: Any?) {
 // todo support mapping of root paths, especially when comparing two indexRuns
 // todo optimize memory usage
 // todo optimize caching
+// todo Feature for backups: How many space is used by a backup run? (list for all backups)

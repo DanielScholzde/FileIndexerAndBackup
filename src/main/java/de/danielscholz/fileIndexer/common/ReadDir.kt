@@ -80,7 +80,8 @@ data class Excluded(val excludedPathsUsed: MutableSet<String>, val excludedFiles
 
 data class DirInfosResult(var files: Int, var size: Long, var caseSensitive: Boolean, val excluded: Excluded)
 
-suspend fun readAllDirInfos(dir: File, scanArchiveContents: Boolean, includePaths: List<String> = listOf()): DirInfosResult {
+
+fun readAllDirInfos(dir: File, scanArchiveContents: Boolean, includePaths: List<String> = listOf()): DirInfosResult {
 
    val result = DirInfosResult(0,
                                0,
@@ -106,7 +107,7 @@ suspend fun readAllDirInfos(dir: File, scanArchiveContents: Boolean, includePath
       }
    }
 
-   suspend fun readDirIntern(dir: File, includePaths: List<Path>) {
+   fun readDirIntern(dir: File, includePaths: List<Path>) {
       val filesAndDirs = dir.listFiles()
       if (filesAndDirs != null) {
          for (fileEntry in filesAndDirs) {
@@ -165,11 +166,11 @@ suspend fun readAllDirInfos(dir: File, scanArchiveContents: Boolean, includePath
    return result
 }
 
-suspend fun processArchive(archive: File,
-                           processEntry: suspend (InputStreamWrapper, ArchiveEntry) -> Unit,
-                           processFailure: (Exception) -> Unit): Boolean {
+fun processArchive(archive: File,
+                   processEntry: (InputStreamWrapper, ArchiveEntry) -> Unit,
+                   processFailure: (Exception) -> Unit): Boolean {
 
-   suspend fun processArchiveStream(archiveInputStream: ArchiveInputStream) {
+   fun processArchiveStream(archiveInputStream: ArchiveInputStream) {
       while (true) {
          val entry = archiveInputStream.nextEntry ?: break
          if (!archiveInputStream.canReadEntryData(entry)) {
@@ -218,6 +219,77 @@ suspend fun processArchive(archive: File,
                            override fun close() {}
                         },
                         entry)
+               }
+               testIfCancel()
+            }
+         }
+      }
+      return true
+   } catch (e: UnsupportedZipFeatureException) {
+      processFailure(e)
+   } catch (e: ArchiveException) {
+      processFailure(e)
+   } catch (e: IOException) {
+      processFailure(e)
+   }
+   return false
+}
+
+suspend fun processArchiveSuspending(archive: File,
+                                     processEntry: suspend (InputStreamWrapper, ArchiveEntry) -> NoResult,
+                                     processFailure: (Exception) -> Unit): Boolean {
+
+   suspend fun processArchiveStream(archiveInputStream: ArchiveInputStream): NoResult {
+      return noResult {
+         while (true) {
+            val entry = archiveInputStream.nextEntry ?: break
+            if (!archiveInputStream.canReadEntryData(entry)) {
+               processFailure(Exception("Archive entry could not be read: ${entry.name}"))
+               continue
+            }
+            if (!entry.isDirectory) {
+               processEntry(InputStreamWrapperImpl(archiveInputStream), entry).handleException()
+            }
+            testIfCancel()
+         }
+      }
+   }
+
+   try {
+      if (archive.name.toLowerCase().endsWith(".zip")) {
+         // Cp437 ist der Default (MS-DOS Encoding)
+         ZipFile(archive, "Cp437").tryWith { zipFile ->
+            for (zipArchiveEntry in zipFile.entriesInPhysicalOrder) {
+               if (!zipArchiveEntry.isDirectory) {
+                  zipFile.getInputStream(zipArchiveEntry).tryWith { inputStream ->
+                     processEntry(InputStreamWrapperImpl(inputStream), zipArchiveEntry).handleException()
+                  }
+               }
+            }
+         }
+      } else if (archive.name.toLowerCase().endsWith(".tar.gz")) {
+         BufferedInputStream(FileInputStream(archive)).tryWith { stream ->
+            TarArchiveInputStream(GzipCompressorInputStream(stream)).tryWith { archiveInputStream ->
+               processArchiveStream(archiveInputStream).handleException()
+            }
+         }
+      } else if (!archive.name.toLowerCase().endsWith(".7z")) {
+         BufferedInputStream(FileInputStream(archive)).tryWith { stream ->
+            ArchiveStreamFactory().createArchiveInputStream(stream).tryWith { archiveInputStream ->
+               processArchiveStream(archiveInputStream).handleException()
+            }
+         }
+      } else {
+         SevenZFile(archive).tryWith { sevenZFile ->
+            while (true) {
+               val entry = sevenZFile.nextEntry ?: break
+               if (!entry.isDirectory) {
+                  processEntry(
+                        object : InputStreamWrapper {
+                           override fun read(b: ByteArray): Int = sevenZFile.read(b)
+                           override fun close() {}
+                        },
+                        entry).handleException()
                }
                testIfCancel()
             }

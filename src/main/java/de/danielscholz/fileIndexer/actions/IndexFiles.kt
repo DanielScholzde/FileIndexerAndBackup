@@ -25,7 +25,6 @@ import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.attribute.BasicFileAttributes
 import java.time.Instant
-import java.util.*
 import kotlin.math.absoluteValue
 
 /**
@@ -70,13 +69,7 @@ class IndexFiles(private val dir: File,
 
    fun run(): Pair<IndexRun, Int> {
       // reads the number of files, size of all files within the directory and determines excludedFilesUsed / excludedPathsUsed
-      val dirInfos = runBlocking {
-         var dirInfos: DirInfosResult? = null
-         launch(Dispatchers.Unconfined) {
-            dirInfos = readAllDirInfos(dir, indexArchiveContents, includedPaths)
-         }.join()
-         dirInfos!!
-      }
+      val dirInfos = readAllDirInfos(dir, indexArchiveContents, includedPaths)
       stat.filesSizeAll = dirInfos.size
       stat.filesCountAll = dirInfos.files
       caseSensitiveFS = dirInfos.caseSensitive
@@ -227,7 +220,7 @@ class IndexFiles(private val dir: File,
          }
       }
 
-      processFiles(files.filter { isArchiveToProcess(it) })
+      processFiles(files.filter { isArchiveToProcess(it) }) // process archives first
       processFiles(files.filter { !isArchiveToProcess(it) })
 
       for (folder in folders) {
@@ -243,14 +236,14 @@ class IndexFiles(private val dir: File,
          readSemaphore(file.name, file.length(), false, false) {
             val filePathCache = mutableMapOf<String, FilePath>()
 
-            val archiveRead = processArchive(
+            val archiveRead = processArchiveSuspending(
                   file,
                   { stream, archiveEntry ->
                      processArchiveFile(file, stream, archiveEntry, filePath, filePathCache)
                   },
                   { exception ->
                      Global.stat.failedFileReads.add(Pair(file, exception.message))
-                     logger.warn("WARN: Content of archive could not be read: $file", exception)
+                     logger.warn("WARN: $file: Content of archive could not be read. {}: {}", exception.javaClass, exception.message)
                   })
 
             processFile(file, filePath, archiveRead, true)
@@ -283,7 +276,7 @@ class IndexFiles(private val dir: File,
                               false,
                               null,
                               archiveRead,
-                              alreadyWithinReadSemaphore)
+                              alreadyWithinReadSemaphore).handleException()
          }
       } catch (e: IOException) {
          Global.stat.failedFileReads.add(Pair(file, e.message))
@@ -301,59 +294,61 @@ class IndexFiles(private val dir: File,
                                          inArchive: Boolean,
                                          archiveName: String?,
                                          archiveRead: Boolean,
-                                         alreadyWithinReadSemaphore: Boolean) {
-      synchronized(filename, fileSize) {
-         logger.trace("START process: {}, file size: {} {}", filename, fileSize, inArchive.ifTrue("(archive: $archiveName)", "")) // todo
+                                         alreadyWithinReadSemaphore: Boolean): NoResult {
+      return synchronized(filename, fileSize) {
+         noResult {
+            logger.trace("START process: {}, file size: {} {}", filename, fileSize, inArchive.ifTrue("(archive: $archiveName)", "")) // todo
 
-         var fileContentId: Long? = null
-         var referenceInode: Long? = null
+            var fileContentId: Long? = null
+            var referenceInode: Long? = null
 
-         if (fileSize > 0) {
-            val result = createFileContent(lazyInputStream,
-                                           fileSize,
-                                           modified,
-                                           filename,
-                                           filePath,
-                                           inArchive,
-                                           archiveName,
-                                           alreadyWithinReadSemaphore)
-            fileContentId = result.first
-            referenceInode = result.second
-         }
-
-         val fileLocation = pl.insertIntoFileLocation(
-               FileLocation(0,
-                            pl,
-                            fileContentId,
-                            filePath.id,
-                            indexRun!!.id,
-                            filename,
-                            filename.getFileExtension(),
-                            created,
-                            modified,
-                            hidden,
-                            inArchive,
-                            referenceInode))
-
-         if (fileSize > 0 && !inArchive) {
-            addAlreadyIndexedFile(fileLocation, fileSize, modified)
-         }
-
-         Global.stat.indexedFilesCount++
-         Global.stat.indexedFilesSize += fileSize
-         stat.indexedFilesCount++
-         if (inArchive) {
-            stat.indexedFilesSize += fileSize
-         } else {
-            if (!archiveRead) {
-               stat.indexedFilesSize += fileSize
+            if (fileSize > 0) {
+               val result = createFileContent(lazyInputStream,
+                                              fileSize,
+                                              modified,
+                                              filename,
+                                              filePath,
+                                              inArchive,
+                                              archiveName,
+                                              alreadyWithinReadSemaphore).get()
+               fileContentId = result.first
+               referenceInode = result.second
             }
 
-            stat.indexedFilesCountNoArchive++
-            stat.indexedFilesSizeNoArchive += fileSize
-         }
+            val fileLocation = pl.insertIntoFileLocation(
+                  FileLocation(0,
+                               pl,
+                               fileContentId,
+                               filePath.id,
+                               indexRun!!.id,
+                               filename,
+                               filename.getFileExtension(),
+                               created,
+                               modified,
+                               hidden,
+                               inArchive,
+                               referenceInode))
 
-         logger.trace("END   process: $filename, file size: $fileSize")
+            if (fileSize > 0 && !inArchive) {
+               addAlreadyIndexedFile(fileLocation, fileSize, modified)
+            }
+
+            Global.stat.indexedFilesCount++
+            Global.stat.indexedFilesSize += fileSize
+            stat.indexedFilesCount++
+            if (inArchive) {
+               stat.indexedFilesSize += fileSize
+            } else {
+               if (!archiveRead) {
+                  stat.indexedFilesSize += fileSize
+               }
+
+               stat.indexedFilesCountNoArchive++
+               stat.indexedFilesSizeNoArchive += fileSize
+            }
+
+            logger.trace("END   process: $filename, file size: $fileSize")
+         }
       }
    }
 
@@ -371,118 +366,124 @@ class IndexFiles(private val dir: File,
                                          filePath: FilePath,
                                          inArchive: Boolean,
                                          archiveName: String?,
-                                         alreadyWithinReadSemaphore: Boolean): Pair<Long, Long?> {
-      if (!inArchive) {
-         var fileContentId: Long? = null
-         var referenceInode: Long? = null
-         var minOneOtherFileLocationWithSameInode = false
-         val foundFileLocations = searchInAlreadyIndexedFilesForHardlinks(filePath, filename, fileSize, modified)
-         if (foundFileLocations.isNotEmpty()) {
-            val minExistingRefInode = foundFileLocations.mapNotNull { it.referenceInode }.minBy { it }
-            for (fileLocation in foundFileLocations) {
-               // update only the current indexRun layer except it is explicitly demanded
-               if (updateHardlinksInLastIndex || fileLocation.indexRunId == indexRun!!.id) {
-                  if (referenceInode == null) {
-                     referenceInode = minExistingRefInode ?: ++maxReferenceInode
+                                         alreadyWithinReadSemaphore: Boolean): Result<Pair<Long, Long?>> {
+      return result {
+         if (!inArchive) {
+            var fileContentId: Long? = null
+            var referenceInode: Long? = null
+            var minOneOtherFileLocationWithSameInode = false
+            val foundFileLocations = searchInAlreadyIndexedFilesForHardlinks(filePath, filename, fileSize, modified)
+            if (foundFileLocations.isNotEmpty()) {
+               val minExistingRefInode = foundFileLocations.mapNotNull { it.referenceInode }.minBy { it }
+               for (fileLocation in foundFileLocations) {
+                  // update only the current indexRun layer except it is explicitly demanded
+                  if (updateHardlinksInLastIndex || fileLocation.indexRunId == indexRun!!.id) {
+                     if (referenceInode == null) {
+                        referenceInode = minExistingRefInode ?: ++maxReferenceInode
+                     }
+                     if (fileLocation.referenceInode != referenceInode) {
+                        fileLocation.referenceInode = referenceInode
+                        pl.updateFileLocation(fileLocation)
+                     }
+                     minOneOtherFileLocationWithSameInode = true
                   }
-                  if (fileLocation.referenceInode != referenceInode) {
-                     fileLocation.referenceInode = referenceInode
-                     pl.updateFileLocation(fileLocation)
-                  }
-                  minOneOtherFileLocationWithSameInode = true
+                  // all fileContentId's should be the same
+                  if (fileContentId != null && fileContentId != fileLocation.fileContentId) throw IllegalStateException()
+                  fileContentId = fileLocation.fileContentId
                }
-               // all fileContentId's should be the same
-               if (fileContentId != null && fileContentId != fileLocation.fileContentId) throw IllegalStateException()
-               fileContentId = fileLocation.fileContentId
+            }
+            if (fileContentId != null) {
+               return@result fileContentId to minOneOtherFileLocationWithSameInode.ifTrue(referenceInode, null)
             }
          }
-         if (fileContentId != null) {
-            return fileContentId to minOneOtherFileLocationWithSameInode.ifTrue(referenceInode, null)
+
+         val extension = filename.getFileExtension()?.toLowerCase()
+         val lazyImgContent = if (extension in Config.INST.imageExtensions && fileSize < 50_000_000) {
+            myLazy { ByteArray(fileSize.toInt()) }
+         } else {
+            null
          }
-      }
 
-      val extension = filename.getFileExtension()?.toLowerCase()
-      val lazyImgContent = if (extension in Config.INST.imageExtensions && fileSize < 50_000_000) {
-         myLazy { ByteArray(fileSize.toInt()) }
-      } else {
-         null
-      }
+         val checksumCreator = myLazy {
+            ChecksumCreator(lazyInputStream.value, fileSize, null, lazyImgContent?.value) // todo file?
+         }
+         val checksumFromBeginTemp = myLazy {
+            checksumCreator.value.getChecksumFromBeginTemp().joinToString(",")
+         }
 
-      val checksumCreator = myLazy {
-         ChecksumCreator(lazyInputStream.value, fileSize, null, lazyImgContent?.value) // todo file?
-      }
-      val checksumFromBeginTemp = myLazy {
-         checksumCreator.value.getChecksumFromBeginTemp().joinToString(",")
-      }
+         // if fastMode is active, the calculation of the complete hash may be omitted
+         if (Config.INST.fastMode && !isAlwaysCheckHash(filename)) {
+            for (lastIndexedFileLocation in lastIndexedFileLocationsByKey[Key(fileSize, modified.toEpochMilli())]) {
+               if (lastIndexedFileLocation.filename == filename
+                   && compareFilePaths(lastIndexedFileLocation, filePath)
+                   && (Config.INST.ignoreHashInFastMode
+                       || lastIndexedFileLocation.fileContent!!.hashBegin.startsWith(
+                           readSemaphore(filename, fileSize, inArchive, alreadyWithinReadSemaphore) {
+                              result {
+                                 stat.currentProcessedFile = if (archiveName != null) "$archiveName / $filename" else filename
+                                 checksumFromBeginTemp.value
+                              }
+                           }.get()))) {
 
-      // if fastMode is active, the calculation of the complete hash may be omitted
-      if (Config.INST.fastMode && !isAlwaysCheckHash(filename)) {
-         for (lastIndexedFileLocation in lastIndexedFileLocationsByKey[Key(fileSize, modified.toEpochMilli())]) {
-            if (lastIndexedFileLocation.filename == filename
-                && compareFilePaths(lastIndexedFileLocation, filePath)
-                && (Config.INST.ignoreHashInFastMode
-                    || lastIndexedFileLocation.fileContent!!.hashBegin.startsWith(
-                        readSemaphore(filename, fileSize, inArchive, alreadyWithinReadSemaphore) {
-                           stat.currentProcessedFile = if (archiveName != null) "$archiveName / $filename" else filename
-                           checksumFromBeginTemp.value
-                        }))) {
+                  logger.trace("FAST_MODE: already indexed file found: $filename")
+                  Global.stat.fastModeHitCount++
 
-               logger.trace("FAST_MODE: already indexed file found: $filename")
-               Global.stat.fastModeHitCount++
+                  stat.currentProcessedFile = filename
 
-               stat.currentProcessedFile = filename
-
-               return lastIndexedFileLocation.fileContent!!.id to null
+                  return@result lastIndexedFileLocation.fileContent!!.id to null
+               }
             }
          }
-      }
 
-      Global.stat.notFastModeHitCount++
+         Global.stat.notFastModeHitCount++
 
-      // calculate hash, expensive!!
-      val checksum = readSemaphore(filename, fileSize, inArchive, alreadyWithinReadSemaphore) {
-         stat.currentProcessedFile = if (archiveName != null) "$archiveName / $filename" else filename
-         checksumCreator.value.calcChecksum()
-      }
-
-      // query database for a matching fileContent with this hash
-      var fileContent = pl.db.dbQueryUniqueNullable(Queries.fileContent1, listOf(checksum.sha1, fileSize)) {
-         pl.extractFileContent(it)
-      }
-
-      if (fileContent != null) {
-         // entry found; return this entry
-         return fileContent.id to null
-      }
-
-      // otherwise create a new entry
-      fileContent = pl.insertIntoFileContent(
-            FileContent(0,
-                        pl,
-                        fileSize,
-                        checksum.sha1,
-                        checksum.sha1ChunksFromBeginning.joinToString(","),
-                        checksum.sha1ChunksFromEnd.joinToString(",")))
-
-      if (lazyImgContent != null && lazyImgContent.isInitialized()) {
-         try {
-            val imgAttr = extractExifOriginalDateAndDimension(lazyImgContent.value, Config.INST.timeZone)
-            if (imgAttr.originalDate != null || imgAttr.width != null) {
-               pl.insertIntoFileMeta(FileMeta(0, pl, fileContent.id, imgAttr.width, imgAttr.height, imgAttr.originalDate))
+         // calculate hash, expensive!!
+         val checksum = readSemaphore(filename, fileSize, inArchive, alreadyWithinReadSemaphore) {
+            result {
+               stat.currentProcessedFile = if (archiveName != null) "$archiveName / $filename" else filename
+               checksumCreator.value.calcChecksum()
             }
-            //logger.info("$filename: ${imgAttr.width}x${imgAttr.height} ${imgAttr.originalDate?.formatDE()}")
-         } catch (e: Exception) {
-            logger.warn("WARN: $filePath/$filename: EXIF infos could not be read. {}: {}", e.javaClass.name, e.message)
+         }.get()
+
+         // query database for a matching fileContent with this hash
+         var fileContent = pl.db.dbQueryUniqueNullable(Queries.fileContent1, listOf(checksum.sha1, fileSize)) {
+            pl.extractFileContent(it)
          }
-         if (Config.INST.createThumbnails) {
-            saveThumbnail(extension, lazyImgContent.value, fileContent.id)
+
+         if (fileContent != null) {
+            // entry found; return this entry
+            return@result fileContent.id to null
          }
+
+         // otherwise create a new entry
+         fileContent = pl.insertIntoFileContent(
+               FileContent(0,
+                           pl,
+                           fileSize,
+                           checksum.sha1,
+                           checksum.sha1ChunksFromBeginning.joinToString(","),
+                           checksum.sha1ChunksFromEnd.joinToString(",")))
+
+         if (lazyImgContent != null && lazyImgContent.isInitialized()) {
+            try {
+               val imgAttr = extractExifOriginalDateAndDimension(lazyImgContent.value, Config.INST.timeZone)
+               if (imgAttr.originalDate != null || imgAttr.width != null) {
+                  pl.insertIntoFileMeta(FileMeta(0, pl, fileContent.id, imgAttr.width, imgAttr.height, imgAttr.originalDate))
+               }
+               //logger.info("$filename: ${imgAttr.width}x${imgAttr.height} ${imgAttr.originalDate?.formatDE()}")
+            } catch (e: Exception) {
+               logger.warn("WARN: $filePath/$filename: EXIF infos could not be read. {}: {}", e.javaClass.name, e.message)
+            }
+            if (Config.INST.createThumbnails) {
+               saveThumbnail(extension, lazyImgContent.value, fileContent.id)
+            }
+         }
+
+         Global.stat.newIndexedFilesCount++
+         Global.stat.newIndexedFilesSize += fileSize
+
+         return@result fileContent.id to null
       }
-
-      Global.stat.newIndexedFilesCount++
-      Global.stat.newIndexedFilesSize += fileSize
-
-      return fileContent.id to null
    }
 
    private fun addAlreadyIndexedFile(fileLocation: FileLocation,
@@ -600,7 +601,7 @@ class IndexFiles(private val dir: File,
                                           stream: InputStreamWrapper,
                                           entry: ArchiveEntry,
                                           parentFilePath: FilePath,
-                                          filePathCache: MutableMap<String, FilePath>) {
+                                          filePathCache: MutableMap<String, FilePath>): NoResult {
       val pathAndFilename = entry.name.replace('\\', '/')
       val filename = pathAndFilename.substringAfterLast("/")
       val pathWithinArchive = pathAndFilename.substringBeforeLast("/", "")
@@ -619,14 +620,14 @@ class IndexFiles(private val dir: File,
       }
       val modified = entry.lastModifiedDate.toInstant()
 
-      processFileStream(filePath, filename, myLazy { stream }, modified, modified, entry.size, false, true, archive.name, true, true)
+      return processFileStream(filePath, filename, myLazy { stream }, modified, modified, entry.size, false, true, archive.name, true, true).next()
    }
 
    private fun isAlwaysCheckHash(filename: String): Boolean = Config.INST.alwaysCheckHashOnIndexForFilesSuffix.any { filename.endsWith(it) }
 
    private fun isArchiveToProcess(file: File) = indexArchiveContents && file.extension.toLowerCase() in Config.INST.archiveExtensions
 
-   private val mutex = Array(42) { Mutex() }
+   private val mutexArray = Array(42) { Mutex() }
 
    /**
     * Mutex which prevents parallel processing of files with the same file size.
@@ -634,9 +635,9 @@ class IndexFiles(private val dir: File,
     */
    private suspend fun <T> synchronized(filename: String, fileSize: Long, block: suspend () -> T): T {
       // ATTENTION: which lock to consider is determined by fileSize
-      val id = fileSize.toByte().toInt().absoluteValue % mutex.size
+      val id = fileSize.toByte().toInt().absoluteValue % mutexArray.size
       logger.trace("Mutex {} acquire with file size {}", id, fileSize)
-      mutex[id].withLock(filename) {
+      mutexArray[id].withLock(filename) {
          return block()
       }
    }
