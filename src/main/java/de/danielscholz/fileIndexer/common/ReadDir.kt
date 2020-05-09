@@ -24,6 +24,9 @@ data class FolderResult(
       val folders: List<File>,
       val files: List<File>)
 
+private val logger = LoggerFactory.getLogger("ReadDir")
+
+
 fun readDir(dir: File, caseSensitive: Boolean): FolderResult {
    val files: MutableList<File> = mutableListOf()
    val folders: MutableList<File> = mutableListOf()
@@ -41,7 +44,9 @@ fun readDir(dir: File, caseSensitive: Boolean): FolderResult {
          }
       }
    } else {
-      Global.stat.failedDirReads.add(dir.toString())
+      val msg = "ERROR: $dir: Directory is not readable"
+      Global.stat.failedDirReads.add(msg)
+      logger.error(msg)
    }
    return FolderResult(folders, files)
 }
@@ -57,8 +62,6 @@ fun readAllDirInfos(dir: File, scanArchiveContents: Boolean, includePaths: List<
                                0,
                                isCaseSensitiveFileSystem(dir) ?: throw Exception("Unable to determine if filesystem is case sensitive!"),
                                Excluded(mutableSetOf(), mutableSetOf()))
-
-   val logger = LoggerFactory.getLogger("readAllDirInfos")
 
    logger.info("Read all files of directory (incl. subdirectories): $dir [" +
                "included paths: " + (if (includePaths.isEmpty()) "*" else includePaths.joinToString { "\"$it\"" }) + ", " +
@@ -108,7 +111,7 @@ fun readAllDirInfos(dir: File, scanArchiveContents: Boolean, includePaths: List<
                               result.size += archiveEntry.size
                            },
                            { exception ->
-                              logger.warn("WARN: $fileEntry: Content of archive could not be read. {}: {}", exception.javaClass.name, exception.message)
+                              logger.warn("ERROR: $fileEntry: Content of archive could not be read. {}: {}", exception.javaClass.simpleName, exception.message)
                            }
                      )
                   }

@@ -242,8 +242,9 @@ class IndexFiles(private val dir: File,
                      processArchiveFile(file, stream, archiveEntry, filePath, filePathCache)
                   },
                   { exception ->
-                     Global.stat.failedFileReads.add(Pair(file, exception.message))
-                     logger.warn("WARN: $file: Content of archive could not be read. {}: {}", exception.javaClass, exception.message)
+                     val msg = "ERROR: $file: Content of archive could not be read. ${exception.javaClass.simpleName}: ${exception.message}"
+                     Global.stat.failedFileReads.add(msg)
+                     logger.error(msg)
                   })
 
             processFile(file, filePath, archiveRead, true)
@@ -279,8 +280,9 @@ class IndexFiles(private val dir: File,
                               alreadyWithinReadSemaphore).handleException()
          }
       } catch (e: IOException) {
-         Global.stat.failedFileReads.add(Pair(file, e.message))
-         logger.error("ERROR: $file: File could not be read. {}: {}", e.javaClass.name, e.message)
+         val msg = "ERROR: $file: File could not be read. ${e.javaClass.simpleName}: ${e.message}"
+         Global.stat.failedFileReads.add(msg)
+         logger.error(msg)
       }
    }
 
@@ -472,7 +474,7 @@ class IndexFiles(private val dir: File,
                }
                //logger.info("$filename: ${imgAttr.width}x${imgAttr.height} ${imgAttr.originalDate?.formatDE()}")
             } catch (e: Exception) {
-               logger.warn("WARN: $filePath/$filename: EXIF infos could not be read. {}: {}", e.javaClass.name, e.message)
+               logger.warn("WARN: $filePath/$filename: EXIF infos could not be read. {}: {}", e.javaClass.simpleName, e.message)
             }
             if (Config.INST.createThumbnails) {
                saveThumbnail(extension, lazyImgContent.value, fileContent.id)

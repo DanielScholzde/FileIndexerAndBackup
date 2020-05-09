@@ -406,17 +406,17 @@ class BackupFiles(private val pl: PersistenceLayer) {
          try {
             Files.createLink(testFile2.toPath(), testFile.toPath())
          } catch (e: FileAlreadyExistsException) {
-            logger.error("Test for hardlink support aborted: File $testFile2 already exists!")
+            logger.error("ERROR: Test for hardlink support aborted: File $testFile2 already exists!")
             return false
          } catch (e: Exception) {
-            logger.error("Path $targetDir does not support hardlinks!")
+            logger.error("ERROR: Path $targetDir does not support hardlinks!")
             return false
          } finally {
             testFile2.delete()
          }
 
       } catch (e: Exception) {
-         logger.error("Path $targetDir is not writeable!")
+         logger.error("ERROR: Path $targetDir is not writeable!")
          return false
       } finally {
          testFile.delete()

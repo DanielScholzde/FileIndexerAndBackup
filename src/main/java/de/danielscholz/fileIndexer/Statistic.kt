@@ -19,7 +19,7 @@ class Statistic(
       var deletedFilesCount: Int = 0,
       var deletedFilesSize: Long = 0,
       var failedDirReads: MutableList<String> = syncronizedMutableListOf(),
-      var failedFileReads: MutableList<Pair<File, String?>> = syncronizedMutableListOf(),
+      var failedFileReads: MutableList<String> = syncronizedMutableListOf(),
       var fastModeHitCount: AtomicInteger = AtomicInteger(),
       var notFastModeHitCount: AtomicInteger = AtomicInteger(),
       var queryCount: AtomicInteger = AtomicInteger(),
@@ -32,10 +32,10 @@ class Statistic(
 
    fun echoStatistics() {
       for (failedDirRead in failedDirReads) {
-         logger.info("Directory is not readable: {}", failedDirRead)
+         logger.error(failedDirRead)
       }
       for (failedFileRead in failedFileReads) {
-         logger.info("File is not readable: {} ({})", failedFileRead.first, failedFileRead.second)
+         logger.error(failedFileRead)
       }
 
       if (copiedFilesCount > 0)

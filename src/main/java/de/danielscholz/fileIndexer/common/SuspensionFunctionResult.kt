@@ -25,13 +25,11 @@ class Result<T> private constructor(private val result: T?, private val exceptio
 class NoResult(private val exception: Exception? = null) {
 
    fun next(): NoResult {
-      exception?.addSuppressed(Exception())
       return this
    }
 
    fun handleException() {
       if (exception != null) {
-         exception.addSuppressed(Exception())
          throw exception
       }
    }

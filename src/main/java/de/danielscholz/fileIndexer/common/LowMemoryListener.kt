@@ -18,7 +18,7 @@ class LowMemoryListener(private val max: Long, private val threshold: Long) : No
 
    override fun handleNotification(notification: Notification, handback: Any?) {
       if (notification.type == MemoryNotificationInfo.MEMORY_THRESHOLD_EXCEEDED) {
-         logger.error("Memory usage threshold reached: " + threshold.formatAsFileSize() + " von " + max.formatAsFileSize())
+         logger.error("ERROR: Memory usage threshold reached: " + threshold.formatAsFileSize() + " of " + max.formatAsFileSize())
          logger.error("shutting down..")
          Global.cancel = true
       }

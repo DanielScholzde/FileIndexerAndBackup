@@ -48,7 +48,7 @@ class ChecksumCreator(private val inputStreamWrapper: InputStreamWrapper,
          }
       } catch (e: Exception) {
          if (e !is CancelException && file != null && fileSize != file.length()) {
-            Global.stat.failedFileReads.add(Pair(file, e.message))
+            Global.stat.failedFileReads.add("ERROR: $file: Hash could not be calculated. ${e.javaClass.simpleName}: ${e.message}")
          } else throw e
       }
    }

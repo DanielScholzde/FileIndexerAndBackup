@@ -90,8 +90,8 @@ fun transaction(logger: Logger, db: Database, function: () -> Unit) {
       try {
          db.rollback()
       } catch (ee: Exception) {
-         JavaExceptionUtil.addSuppressed(e, ee)
-         logger.error("Ein Folgefehler ist aufgetreten (Ursprungsfehler siehe unten)", ee)
+         e.addSuppressed(ee)
+         logger.error("Ein Folgefehler ist aufgetreten (Ursprungsfehler siehe unten)", ee) // todo
       }
       throw e
    }
@@ -108,7 +108,7 @@ inline fun <T : AutoCloseable, R> T.tryWith(block: (T) -> R): R {
       } catch (closeException: Exception) {
          // eat the closeException as we are already throwing the original cause
          // and we don't want to mask the real exception
-         JavaExceptionUtil.addSuppressed(e, closeException)
+         e.addSuppressed(closeException)
       }
       throw e
    } finally {
@@ -129,7 +129,7 @@ inline fun <T : AutoCloseable, R> Lazy<T>.tryWith(block: (Lazy<T>) -> R): R {
       } catch (closeException: Exception) {
          // eat the closeException as we are already throwing the original cause
          // and we don't want to mask the real exception
-         JavaExceptionUtil.addSuppressed(e, closeException)
+         e.addSuppressed(closeException)
       }
       throw e
    } finally {

@@ -84,7 +84,7 @@ class ImportOldDatabase(val pl: PersistenceLayer) {
 
          val oldPl = OldPersistenceLayer(oldDb)
          if (oldPl.db.dbQueryUniqueStr("PRAGMA integrity_check").toLowerCase() != "ok") {
-            logger.error("Datenbank ist nicht konsistent! Beende Programm.")
+            logger.error("ERROR: Datenbank ist nicht konsistent! Beende Programm.")
             throw Exception("Datenbank ist nicht konsistent! Beende Programm.")
          }
          oldDb.dbExecNoResult("PRAGMA cache_size=-8000") // 8 MB

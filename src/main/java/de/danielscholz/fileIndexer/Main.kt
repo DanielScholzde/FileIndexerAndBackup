@@ -62,7 +62,7 @@ internal fun main(args: Array<String>,
       Database(globalParams.db.toString()).tryWith { db ->
          val pl = PersistenceLayer(db)
          if (pl.db.dbQueryUniqueStr("PRAGMA integrity_check").toLowerCase() != "ok") {
-            logger.error("Integrity check of database failed! Exit program.")
+            logger.error("ERROR: Integrity check of database failed! Exit program.")
             throw Exception("Integrity check of database failed! Exit program.")
          }
          db.dbExecNoResult("PRAGMA cache_size=-8000") // 8 MB
@@ -79,7 +79,7 @@ internal fun main(args: Array<String>,
             command(pl)
             runAfterCmd(pl)
          } else {
-            logger.error("The version of the database ${db.dbVersion} does not match the current program version (${Global.programVersion}). Please update the program.")
+            logger.error("ERROR: The version of the database ${db.dbVersion} does not match the current program version (${Global.programVersion}). Please update the program.")
          }
 
          db.dbExecNoResult("PRAGMA optimize")
@@ -145,7 +145,7 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
          addActionParser(Commands.CONSOLE.command) {
             val console = System.console()
             if (console == null) {
-               logger.error("Console not supported!")
+               logger.error("ERROR: Console not supported!")
             } else {
                // do not call outerCallback, because we don't want to open a database yet
                processConsoleInputs(console, globalParams)
