@@ -114,7 +114,7 @@ class IndexFiles(private val dir: File,
                stat.startRefresh()
             }
 
-            createIndex(dir, null)
+            createIndex(dir, null, includedPaths.map { Path(it, it) })
 
             indexRun!!.failureOccurred = false
             pl.updateIndexRun(indexRun!!)
@@ -162,7 +162,7 @@ class IndexFiles(private val dir: File,
 
    data class FLKey(val filePathId: Long, val filename: String)
 
-   private fun createIndex(sourceDir: File, parentFilePath: FilePath?): FilePath {
+   private fun createIndex(sourceDir: File, parentFilePath: FilePath?, includedPaths: List<Path>): FilePath {
       stat.filesDir = 0
       stat.filesProcessedDir.reset()
       logger.info("index: {}", sourceDir)
@@ -179,7 +179,7 @@ class IndexFiles(private val dir: File,
       }
 
       stat.currentProcessedFile = "Read directory $sourceDir"
-      val (folders, files) = readDir(sourceDir, caseSensitiveFS)
+      val (folders, files) = readDir(sourceDir, caseSensitiveFS, includedPaths)
       stat.filesDir = files.size
 
       fun processFiles(files: List<File>) = runBlocking {
@@ -224,7 +224,7 @@ class IndexFiles(private val dir: File,
       processFiles(files.filter { !isArchiveToProcess(it) })
 
       for (folder in folders) {
-         createIndex(folder, filePath)
+         createIndex(folder.first, filePath, folder.second)
       }
 
       return filePath

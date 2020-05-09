@@ -2,40 +2,31 @@ package de.danielscholz.fileIndexer.common
 
 import de.danielscholz.fileIndexer.Config
 import de.danielscholz.fileIndexer.Global
-import org.apache.commons.compress.archivers.ArchiveEntry
-import org.apache.commons.compress.archivers.ArchiveException
-import org.apache.commons.compress.archivers.ArchiveInputStream
-import org.apache.commons.compress.archivers.ArchiveStreamFactory
-import org.apache.commons.compress.archivers.sevenz.SevenZFile
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
-import org.apache.commons.compress.archivers.zip.UnsupportedZipFeatureException
-import org.apache.commons.compress.archivers.zip.ZipFile
-import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import org.slf4j.LoggerFactory
-import java.io.BufferedInputStream
 import java.io.File
-import java.io.FileInputStream
-import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.attribute.BasicFileAttributes
 
 data class FolderResult(
-      val folders: List<File>,
+      val folders: List<Pair<File, List<Path>>>,
       val files: List<File>)
 
 private val logger = LoggerFactory.getLogger("ReadDir")
 
 
-fun readDir(dir: File, caseSensitive: Boolean): FolderResult {
+fun readDir(dir: File, caseSensitive: Boolean, includePaths: List<Path> = listOf()): FolderResult {
    val files: MutableList<File> = mutableListOf()
-   val folders: MutableList<File> = mutableListOf()
+   val folders: MutableList<Pair<File, List<Path>>> = mutableListOf()
    val filesAndDirs = dir.listFiles()
    if (filesAndDirs != null) {
       for (fileEntry in filesAndDirs) {
          if (fileEntry.isDirectory) {
-            if (!isExcludedDir(fileEntry, caseSensitive, null)) {
-               folders.add(fileEntry)
+            val matched = matchesPath(fileEntry.name, includePaths, caseSensitive)
+            if (includePaths.isEmpty() || matched.isNotEmpty()) {
+               if (!isExcludedDir(fileEntry, caseSensitive, null)) {
+                  folders.add(fileEntry to matched.removeFirstPathElement())
+               }
             }
          } else {
             if (!isExcludedFile(fileEntry, caseSensitive, null)) {
@@ -56,6 +47,28 @@ class Excluded(val excludedPathsUsed: MutableSet<String>, val excludedFilesUsed:
 
 class DirInfosResult(var files: Int, var size: Long, var caseSensitive: Boolean, val excluded: Excluded)
 
+class Path(val path: String, val originalPath: String, var used: Boolean = false)
+
+private fun List<Path>.removeFirstPathElement(): List<Path> {
+   if (this.isEmpty()) return this
+   return this.mapNotNull {
+      val s = it.path.removePrefix("/").removeSuffix("/")
+      if (s.contains('/')) Path(s.substring(s.indexOf('/') + 1), it.originalPath) else null
+   }
+}
+
+private fun matchesPath(name: String, includePaths: List<Path>, caseSensitive: Boolean): List<Path> {
+   var matched = listOf<Path>()
+   if (includePaths.isNotEmpty()) {
+      matched = includePaths.filter {
+         val b = it.path.equals(name, !caseSensitive) || it.path.startsWith(name + "/", !caseSensitive)
+         if (b) it.used = true
+         b
+      }
+   }
+   return matched
+}
+
 fun readAllDirInfos(dir: File, scanArchiveContents: Boolean, includePaths: List<String> = listOf()): DirInfosResult {
 
    val result = DirInfosResult(0,
@@ -70,16 +83,6 @@ fun readAllDirInfos(dir: File, scanArchiveContents: Boolean, includePaths: List<
                "files: ${Config.INST.excludedFiles.filter { !Config.INST.defaultExcludedFiles.contains(it) }.joinToString { "\"$it\"" }}" +
                "]")
 
-   class Path(val path: String, val originalPath: String, var used: Boolean = false)
-
-   fun List<Path>.removeFirstPathElement(): List<Path> {
-      if (this.isEmpty()) return this
-      return this.mapNotNull {
-         val s = it.path.removePrefix("/").removeSuffix("/")
-         if (s.contains('/')) Path(s.substring(s.indexOf('/') + 1), it.originalPath) else null
-      }
-   }
-
    fun readDirIntern(dir: File, includePaths: List<Path>) {
       val filesAndDirs = dir.listFiles()
       if (filesAndDirs != null) {
@@ -87,14 +90,7 @@ fun readAllDirInfos(dir: File, scanArchiveContents: Boolean, includePaths: List<
             val name = fileEntry.name
             val attributes = Files.readAttributes(fileEntry.toPath(), BasicFileAttributes::class.java, LinkOption.NOFOLLOW_LINKS)
             if (attributes.isDirectory) {
-               var matched = listOf<Path>()
-               if (includePaths.isNotEmpty()) {
-                  matched = includePaths.filter {
-                     val b = it.path.equals(name, !result.caseSensitive) || it.path.startsWith(name + "/", !result.caseSensitive)
-                     if (b) it.used = true
-                     b
-                  }
-               }
+               val matched = matchesPath(name, includePaths, result.caseSensitive)
                if (includePaths.isEmpty() || matched.isNotEmpty()) {
                   if (!isExcludedDir(fileEntry, result.caseSensitive, result.excluded)) {
                      readDirIntern(fileEntry, matched.removeFirstPathElement())
