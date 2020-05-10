@@ -20,7 +20,7 @@ fun readDir(dir: File, caseSensitive: Boolean, includePaths: List<Path> = listOf
    val folders: MutableList<Pair<File, List<Path>>> = mutableListOf()
    val filesAndDirs = dir.listFiles()
    if (filesAndDirs != null) {
-      for (fileEntry in filesAndDirs) {
+      for (fileEntry in filesAndDirs.sortedBy { it.name.toLowerCase() }) {
          if (fileEntry.isDirectory) {
             val matched = matchesPath(fileEntry.name, includePaths, caseSensitive)
             if (includePaths.isEmpty() || matched.isNotEmpty()) {
@@ -86,7 +86,7 @@ fun readAllDirInfos(dir: File, scanArchiveContents: Boolean, includePaths: List<
    fun readDirIntern(dir: File, includePaths: List<Path>) {
       val filesAndDirs = dir.listFiles()
       if (filesAndDirs != null) {
-         for (fileEntry in filesAndDirs) {
+         for (fileEntry in filesAndDirs.sortedBy { it.name.toLowerCase() }) {
             val name = fileEntry.name
             val attributes = Files.readAttributes(fileEntry.toPath(), BasicFileAttributes::class.java, LinkOption.NOFOLLOW_LINKS)
             if (attributes.isDirectory) {
