@@ -302,10 +302,10 @@ private fun createParser(toplevel: Boolean,
             ArgParserBuilder(CompareIndexRunsParams()).buildWith {
                addNamelessLast(paramValues::indexNr1, IntParam(), required = true)
                addNamelessLast(paramValues::indexNr2, IntParam(), required = true)
+               addNamelessLast(paramValues::result, EnumParam(CompareIndexRunsParams.CompareIndexRunsResult.LEFT))
             }) {
          outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
-            CompareIndexRuns(pl).run(paramValues.indexNr1.toLong(), paramValues.indexNr2.toLong())
-            null
+            CompareIndexRuns(pl).run(paramValues.indexNr1.toLong(), paramValues.indexNr2.toLong(), paramValues.result)
          }
       }
 

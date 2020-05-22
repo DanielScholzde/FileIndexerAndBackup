@@ -170,11 +170,15 @@ class RemoveIndexRunParams {
 }
 
 class CompareIndexRunsParams {
+   enum class CompareIndexRunsResult { LEFT, RIGHT, BOTH }
+
    @Description("Index 1 number")
    var indexNr1: Int = 0
 
    @Description("Index 2 number")
    var indexNr2: Int = 0
+
+   var result: CompareIndexRunsResult? = null
 }
 
 class ImportOldDbParams {
