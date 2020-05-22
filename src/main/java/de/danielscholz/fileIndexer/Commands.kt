@@ -18,5 +18,8 @@ enum class Commands(val command: String) {
    IMPORT_OLD_DB("importOldDb"),
    CONSOLE("console"),
    STATUS("status"),
+   FILTER("filter"),
+   DELETE("delete"),
+   PRINT("print"),
    EXIT("exit")
 }

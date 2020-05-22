@@ -188,3 +188,11 @@ class FilterFilesParams {
    @Description("Filter")
    var pathFilter: String? = null
 }
+
+class DeleteFilesParams {
+
+}
+
+class PrintFilesParams {
+   var folderOnly: Boolean = true
+}

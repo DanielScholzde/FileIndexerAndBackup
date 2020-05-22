@@ -25,6 +25,12 @@ import kotlin.reflect.KProperty0
 private val logger = LoggerFactory.getLogger("Main")
 
 fun main(args: Array<String>) {
+   registerShutdownCallback {
+      Global.cancel = true
+      (LoggerFactory.getILoggerFactory() as ch.qos.logback.classic.LoggerContext).stop()
+   }
+   registerLowMemoryListener()
+
    main(args, true)
 }
 
@@ -40,11 +46,6 @@ internal fun main(args: Array<String>,
                   runAfterArgParsing: () -> Unit = {},
                   runBeforeCmd: (PersistenceLayer) -> Unit = {},
                   runAfterCmd: (PersistenceLayer) -> Unit = {}) {
-   registerShutdownCallback {
-      Global.cancel = true
-      (LoggerFactory.getILoggerFactory() as ch.qos.logback.classic.LoggerContext).stop()
-   }
-   registerLowMemoryListener()
 
    val argsSplittetOnPipes = args.splitPipes() // support for pipeline processing
 
@@ -450,28 +451,6 @@ private fun createParser(toplevel: Boolean,
          }
       }
 
-      addActionParser(
-            "filter",
-            ArgParserBuilder(FilterFilesParams()).buildWith {
-               add(paramValues::pathFilter, StringParam(), required = true)
-            }) {
-         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
-            if (pipelineResult != null) {
-               return@invoke FilterFiles().run(pipelineResult, paramValues.pathFilter!!)
-            }
-            null
-         }
-      }
-
-      addActionParser("delete") {
-         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
-            if (pipelineResult != null) {
-               DeleteFiles().run(pipelineResult)
-            }
-            null
-         }
-      }
-
       addActionParser(Commands.STATUS.command) {
          loggerInfo(globalParams::db)
          loggerInfo(Config.INST::timeZone)
@@ -498,6 +477,46 @@ private fun createParser(toplevel: Boolean,
       if (!toplevel) {
          addActionParser(Commands.EXIT.command) {
             Global.cancel = true
+         }
+      }
+
+      addHeadline("\nThe following commands are for pipelined executions:\n")
+
+      addActionParser(
+            Commands.FILTER.command,
+            ArgParserBuilder(FilterFilesParams()).buildWith {
+               add(paramValues::pathFilter, StringParam(), required = true)
+            }) {
+         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+            if (pipelineResult != null) {
+               return@invoke FilterFiles().run(pipelineResult, paramValues.pathFilter!!)
+            }
+            null
+         }
+      }
+
+      addActionParser(
+            Commands.DELETE.command,
+            ArgParserBuilder(DeleteFilesParams()).buildWith {
+            }) {
+         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+            if (pipelineResult != null) {
+               DeleteFiles().run(pipelineResult)
+            }
+            pipelineResult
+         }
+      }
+
+      addActionParser(
+            Commands.PRINT.command,
+            ArgParserBuilder(PrintFilesParams()).buildWith {
+               add(paramValues::folderOnly, BooleanParam())
+            }) {
+         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+            if (pipelineResult != null) {
+               PrintFiles(paramValues).run(pipelineResult)
+            }
+            pipelineResult
          }
       }
    }
