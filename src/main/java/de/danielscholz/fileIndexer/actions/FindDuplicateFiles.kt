@@ -10,7 +10,7 @@ class FindDuplicateFiles(private val pl: PersistenceLayer) {
 
    private val logger = LoggerFactory.getLogger(this.javaClass)
 
-   fun run(dirs: List<File>, inclFilenameOnCompare: Boolean): List<File> {
+   fun run(dirs: List<File>, inclFilenameOnCompare: Boolean): List<FileLocation> {
 
       if (dirs.size < 2) {
          logger.error("At least two directories must be specified")
@@ -43,7 +43,7 @@ class FindDuplicateFiles(private val pl: PersistenceLayer) {
 
    private fun find(paths: List<IndexRunFilePathResult>,
                     intersect: Intersect,
-                    resultFilter: ResultFilter): List<File> {
+                    resultFilter: ResultFilter): List<FileLocation> {
       val foundResult = mutableSetMultimapOf<String, FileLocation>()
 
       logger.info("Index Layer:")
@@ -65,7 +65,7 @@ class FindDuplicateFiles(private val pl: PersistenceLayer) {
       var files = 0L
       var size = 0L
 
-      val result = mutableListOf<File>()
+      val result = mutableListOf<FileLocation>()
 
       for (key in foundResult.keySet()) {
          val duplicates = foundResult[key]
@@ -89,7 +89,7 @@ class FindDuplicateFiles(private val pl: PersistenceLayer) {
                if (length == 0L && !file.isFile) {
                   fileExists = false
                } else {
-                  result.add(file)
+                  result.add(it.third)
                }
             }
 

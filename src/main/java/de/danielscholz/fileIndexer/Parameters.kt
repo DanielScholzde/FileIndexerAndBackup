@@ -183,3 +183,8 @@ class ImportOldDbParams {
    var mediumDescription: String? = null
    var mediumSerial: String? = null
 }
+
+class FilterFilesParams {
+   @Description("Filter")
+   var pathFilter: String? = null
+}

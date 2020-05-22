@@ -2,6 +2,7 @@ package de.danielscholz.fileIndexer
 
 import de.danielscholz.fileIndexer.actions.*
 import de.danielscholz.fileIndexer.common.*
+import de.danielscholz.fileIndexer.persistence.FileLocation
 import de.danielscholz.fileIndexer.persistence.PersistenceLayer
 import de.danielscholz.fileIndexer.persistence.PrepareDb
 import de.danielscholz.fileIndexer.persistence.Queries
@@ -43,70 +44,98 @@ internal fun main(args: Array<String>,
       Global.cancel = true
       (LoggerFactory.getILoggerFactory() as ch.qos.logback.classic.LoggerContext).stop()
    }
+   registerLowMemoryListener()
 
-   val argsSplitOnPipes = args.splitPipes()
-   var commandResult: List<File>? = null
+   val argsSplittetOnPipes = args.splitPipes()
 
-   val parser = createParser(toplevel, parentGlobalParams) { globalParams: GlobalParams, command: (PersistenceLayer, Boolean) -> List<File>? ->
-      setRootLoggerLevel()
-      registerLowMemoryListener()
+   if (argsSplittetOnPipes.isEmpty() || argsSplittetOnPipes[0].isEmpty()) {
+      logger.error("No arguments are provided!")
+      return
+   }
 
-      if (globalParams.db == null) globalParams.db = File("IndexedFiles")
-      val inMemoryDb = globalParams.db!!.name == ":memory:"
-      if (!inMemoryDb) {
-         if (!globalParams.db!!.name.endsWith(".db")) {
-            globalParams.db = File(globalParams.db.toString().ensureSuffix(".db")).canonicalFile
-         } else {
-            globalParams.db = globalParams.db!!.canonicalFile
-         }
-      }
+   if (!demandedHelp(argsSplittetOnPipes[0], myLazy { createParser(toplevel, parentGlobalParams) { _ -> } })) {
+      runBeforeArgParsing()
+      openDatabaseAndRunCommands(argsSplittetOnPipes[0]) { pl: PersistenceLayer ->
 
-      logger.debug("Database: ${globalParams.db}")
-      Database(globalParams.db.toString()).tryWith { db ->
-         val pl = PersistenceLayer(db)
-         if (pl.db.dbQueryUniqueStr("PRAGMA integrity_check").toLowerCase() != "ok") {
-            logger.error("ERROR: Integrity check of database failed! Exit program.")
-            throw Exception("Integrity check of database failed! Exit program.")
-         }
-         db.dbExecNoResult("PRAGMA cache_size=-8000") // 8 MB
-         db.dbExecNoResult("PRAGMA foreign_keys=ON")
-         //db.dbExecNoResult("PRAGMA synchronous=1")
+         var commandResult: List<FileLocation>? = null
 
-         PrepareDb.run(db) // has its own transaction management
+         val parser = createParser(toplevel, parentGlobalParams) { command: (PersistenceLayer, List<FileLocation>?, Boolean) -> List<FileLocation>? ->
+            setRootLoggerLevel()
 
-         if (db.dbVersion == Global.programVersion) {
             if (Config.INST.dryRun) {
                logger.info("-------- Dry run, no write changes are made to files ---------")
             }
             runBeforeCmd(pl)
-            commandResult = command(pl, argsSplitOnPipes.size > 1)
+            commandResult = command(pl, commandResult, argsSplittetOnPipes.size > 1)
             runAfterCmd(pl)
-         } else {
-            logger.error("ERROR: The version of the database ${db.dbVersion} does not match the current program version (${Global.programVersion}). Please update the program.")
          }
 
-         db.dbExecNoResult("PRAGMA optimize")
+         try {
+            argsSplittetOnPipes.forEach {
+               parser.parseArgs(it)
+            }
+         } catch (e: ArgParseException) {
+            logger.info(parser.printout(e))
+            if (isTest()) throw e // throw exception only in test case
+         }
+      }
+      runAfterArgParsing()
+   }
+}
+
+private fun openDatabaseAndRunCommands(args: Array<String>, commands: (pl: PersistenceLayer) -> Unit) {
+   var dbFile: File? = null
+   var i = 0
+   for (arg in args) {
+      if (arg == "--db") {
+         if (i + 1 <= args.lastIndex) {
+            dbFile = File(args[i + 1])
+            break
+         } else {
+            logger.error("Argument --db has no value!")
+            return
+         }
+      }
+      i++
+   }
+
+   if (dbFile == null) dbFile = File("IndexedFiles")
+   val inMemoryDb = dbFile.name == ":memory:"
+   if (!inMemoryDb) {
+      if (!dbFile.name.endsWith(".db")) {
+         dbFile = File(dbFile.toString().ensureSuffix(".db")).canonicalFile
+      } else {
+         dbFile = dbFile.canonicalFile
       }
    }
 
-   try {
-      if (!demandedHelp(args, parser)) {
-         runBeforeArgParsing()
-         argsSplitOnPipes.forEach {
-            parser.parseArgs(it)
-         }
-         runAfterArgParsing()
+   logger.debug("Database: $dbFile")
+   Database(dbFile.toString()).tryWith { db ->
+      val pl = PersistenceLayer(db)
+      if (pl.db.dbQueryUniqueStr("PRAGMA integrity_check").toLowerCase() != "ok") {
+         logger.error("ERROR: Integrity check of database failed! Exit program.")
+         throw Exception("Integrity check of database failed! Exit program.")
       }
-   } catch (e: ArgParseException) {
-      logger.info(parser.printout(e))
-      if (isTest()) throw e // throw exception only in test case
+      db.dbExecNoResult("PRAGMA cache_size=-8000") // 8 MB
+      db.dbExecNoResult("PRAGMA foreign_keys=ON")
+      //db.dbExecNoResult("PRAGMA synchronous=1")
+
+      PrepareDb.run(db) // has its own transaction management
+
+      if (db.dbVersion == Global.programVersion) {
+         commands(pl)
+      } else {
+         logger.error("ERROR: The version of the database ${db.dbVersion} does not match the current program version (${Global.programVersion}). Please update the program.")
+      }
+
+      db.dbExecNoResult("PRAGMA optimize")
    }
 }
 
 @Suppress("DuplicatedCode")
 private fun createParser(toplevel: Boolean,
                          parentGlobalParams: GlobalParams?,
-                         outerCallback: (GlobalParams, (PersistenceLayer, Boolean) -> List<File>?) -> Unit): ArgParser<GlobalParams> {
+                         outerCallback: ((PersistenceLayer, List<FileLocation>?, Boolean) -> List<FileLocation>?) -> Unit): ArgParser<GlobalParams> {
 
    fun ArgParserBuilder<*>.addConfigParamsForIndexFiles() {
       add(Config.INST::fastMode, BooleanParam())
@@ -173,7 +202,7 @@ private fun createParser(toplevel: Boolean,
                add(paramValues::includedPaths, StringListParam(mapper = { it.replace('\\', '/').removePrefix("/").removeSuffix("/") }))
                addNamelessLast(paramValues::dir, FileParam(true), required = true)
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
+         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             IndexFiles(paramValues.dir!!.canonicalFile,
                        paramValues.includedPaths,
                        paramValues.lastIndexDir?.canonicalFile,
@@ -203,7 +232,7 @@ private fun createParser(toplevel: Boolean,
                addNamelessLast(paramValues::sourceDir, FileParam(checkIsDir = true), required = true)
                addNamelessLast(paramValues::targetDir, FileParam(checkIsDir = true), required = true)
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
+         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             SyncFiles(pl).run(
                   paramValues.sourceDir!!.canonicalFile,
                   paramValues.targetDir!!.canonicalFile,
@@ -236,7 +265,7 @@ private fun createParser(toplevel: Boolean,
                addNamelessLast(paramValues::sourceDir, FileParam(checkIsDir = true), required = true)
                addNamelessLast(paramValues::targetDir, FileParam(checkIsDir = true), required = true)
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
+         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             BackupFiles(pl).run(
                   paramValues.sourceDir!!.canonicalFile,
                   paramValues.targetDir!!.canonicalFile,
@@ -263,7 +292,7 @@ private fun createParser(toplevel: Boolean,
             {
                Config.INST.fastMode = false // deactivate fastMode only on verify as default
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
+         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             VerifyFiles(pl, true).run(paramValues.dir!!.canonicalFile)
             null
          }
@@ -275,7 +304,7 @@ private fun createParser(toplevel: Boolean,
                addNamelessLast(paramValues::indexNr1, IntParam(), required = true)
                addNamelessLast(paramValues::indexNr2, IntParam(), required = true)
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
+         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             CompareIndexRuns(pl).run(paramValues.indexNr1.toLong(), paramValues.indexNr2.toLong())
             null
          }
@@ -287,7 +316,7 @@ private fun createParser(toplevel: Boolean,
                add(paramValues::inclFilenameOnCompare, BooleanParam())
                addNamelessLast(paramValues::dirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
+         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             FindDuplicateFiles(pl).run(
                   paramValues.dirs.map { it.canonicalFile },
                   paramValues.inclFilenameOnCompare)
@@ -301,7 +330,7 @@ private fun createParser(toplevel: Boolean,
                addNamelessLast(paramValues::referenceDir, FileParam(true), required = true)
                addNamelessLast(paramValues::toSearchInDirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
+         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             FindFilesWithNoCopy(pl).run(
                   paramValues.referenceDir!!.canonicalFile,
                   paramValues.toSearchInDirs.map { it.canonicalFile },
@@ -317,7 +346,7 @@ private fun createParser(toplevel: Boolean,
                addNamelessLast(paramValues::referenceDir, FileParam(true), required = true)
                addNamelessLast(paramValues::toSearchInDirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
+         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             CorrectDiffInFileModificationDate(pl).run(
                   paramValues.referenceDir!!.canonicalFile,
                   paramValues.toSearchInDirs.map { it.canonicalFile },
@@ -333,7 +362,7 @@ private fun createParser(toplevel: Boolean,
                add(paramValues::ignoreHoursDiff, IntParam())
                addNamelessLast(paramValues::dirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
+         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             CorrectDiffInFileModificationDateAndExifDateTaken(pl).run(
                   paramValues.dirs.map { it.canonicalFile },
                   paramValues.ignoreSecondsDiff,
@@ -347,7 +376,7 @@ private fun createParser(toplevel: Boolean,
             ArgParserBuilder(RenameFilesToModificationDateParams()).buildWith {
                addNamelessLast(paramValues::dirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
+         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             RenameFilesToModificationDate(pl).run(
                   paramValues.dirs.map { it.canonicalFile })
             null
@@ -359,7 +388,7 @@ private fun createParser(toplevel: Boolean,
             ArgParserBuilder(ListIndexRunsParams()).buildWith {
                addNamelessLast(paramValues::dir, FileParam())
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
+         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             ListIndexRuns(pl).run(paramValues.dir?.canonicalFile)
             null
          }
@@ -370,7 +399,7 @@ private fun createParser(toplevel: Boolean,
             ArgParserBuilder(ListPathsParams()).buildWith {
                addNamelessLast(paramValues::dir, FileParam(), required = true)
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
+         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             ListPaths(pl).run(paramValues.dir!!.canonicalFile)
             null
          }
@@ -382,7 +411,7 @@ private fun createParser(toplevel: Boolean,
                addNamelessLast(paramValues::indexNr, IntParam())
                addNamelessLast(paramValues::indexNrRange, IntRangeParam())
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
+         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             when {
                paramValues.indexNr != null      -> {
                   RemoveIndexRun(pl).removeIndexRun(paramValues.indexNr!!.toLong())
@@ -404,7 +433,7 @@ private fun createParser(toplevel: Boolean,
       }
 
       addActionParser(Commands.SHOW_DATABASE_REPORT.command) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
+         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             ShowDatabaseReport(pl).getOverview()
             null
          }
@@ -417,8 +446,21 @@ private fun createParser(toplevel: Boolean,
                add(paramValues::mediumDescription, StringParam())
                add(paramValues::oldDb, FileParam(checkIsFile = true), required = true)
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
+         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             ImportOldDatabase(pl, paramValues.oldDb!!.canonicalFile, paramValues.mediumSerial, paramValues.mediumDescription).import()
+            null
+         }
+      }
+
+      addActionParser(
+            "filter",
+            ArgParserBuilder(FilterFilesParams()).buildWith {
+               add(paramValues::pathFilter, StringParam(), required = true)
+            }) {
+         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+            if (pipelineResult != null) {
+               return@invoke FilterFiles().run(pipelineResult, paramValues.pathFilter!!)
+            }
             null
          }
       }
@@ -493,7 +535,7 @@ private fun processConsoleInputs(console: Console, globalParams: GlobalParams) {
    }
 }
 
-private fun demandedHelp(args: Array<String>, parser: ArgParser<GlobalParams>): Boolean {
+private fun demandedHelp(args: Array<String>, parser: Lazy<ArgParser<GlobalParams>>): Boolean {
    // offer some more options for showing help and to get help for a specific command
    val helpArguments = setOf("/?", "--?", "?", "--help")
    var foundIdx = -1
@@ -505,7 +547,7 @@ private fun demandedHelp(args: Array<String>, parser: ArgParser<GlobalParams>): 
          }) {
       val argumentsWithoutHelp = args.toMutableList()
       argumentsWithoutHelp.removeAt(foundIdx)
-      logger.info(parser.printout(argumentsWithoutHelp.toTypedArray(), false))
+      logger.info(parser.value.printout(argumentsWithoutHelp.toTypedArray(), false))
       return true
    }
    return false
