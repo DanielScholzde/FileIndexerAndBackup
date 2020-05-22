@@ -46,59 +46,58 @@ internal fun main(args: Array<String>,
    }
    registerLowMemoryListener()
 
-   val argsSplittetOnPipes = args.splitPipes()
+   val argsSplittetOnPipes = args.splitPipes() // support for pipeline processing
 
    if (argsSplittetOnPipes.isEmpty() || argsSplittetOnPipes[0].isEmpty()) {
       logger.error("No arguments are provided!")
       return
    }
 
-   if (!demandedHelp(argsSplittetOnPipes[0], myLazy { createParser(toplevel, parentGlobalParams) { _ -> } })) {
+   val globalParams = parentGlobalParams ?: GlobalParams()
+
+   val parserWithNoCommandProcessing = createParser(toplevel, globalParams) { _ -> }
+
+   if (!demandedHelp(argsSplittetOnPipes[0], parserWithNoCommandProcessing)) {
       runBeforeArgParsing()
-      openDatabaseAndRunCommands(argsSplittetOnPipes[0]) { pl: PersistenceLayer ->
 
-         var commandResult: List<FileLocation>? = null
-
-         val parser = createParser(toplevel, parentGlobalParams) { command: (PersistenceLayer, List<FileLocation>?, Boolean) -> List<FileLocation>? ->
-            setRootLoggerLevel()
-
-            if (Config.INST.dryRun) {
-               logger.info("-------- Dry run, no write changes are made to files ---------")
-            }
-            runBeforeCmd(pl)
-            commandResult = command(pl, commandResult, argsSplittetOnPipes.size > 1)
-            runAfterCmd(pl)
+      try {
+         // test all program arguments with a parser doing no command (globalParams are set!)
+         argsSplittetOnPipes.forEach {
+            parserWithNoCommandProcessing.parseArgs(it)
          }
 
-         try {
+         openDatabaseAndRunCommands(globalParams.db) { pl: PersistenceLayer ->
+
+            var commandResult: List<FileLocation>? = null
+
+            // create parser which executes commands. This parser should not throw a ArgParseException.
+            val parser = createParser(toplevel, globalParams) { command: (PersistenceLayer, List<FileLocation>?, Boolean) -> List<FileLocation>? ->
+               setRootLoggerLevel()
+
+               if (Config.INST.dryRun) {
+                  logger.info("-------- Dry run, no write changes are made to files ---------")
+               }
+               runBeforeCmd(pl)
+               commandResult = command(pl, commandResult, argsSplittetOnPipes.size > 1)
+               runAfterCmd(pl)
+            }
+
+            // all pipeline commands are executed within the same database connection
             argsSplittetOnPipes.forEach {
                parser.parseArgs(it)
             }
-         } catch (e: ArgParseException) {
-            logger.info(parser.printout(e))
-            if (isTest()) throw e // throw exception only in test case
          }
+      } catch (e: ArgParseException) {
+         logger.info(parserWithNoCommandProcessing.printout(e))
+         if (isTest()) throw e // throw exception only in test case
       }
+
       runAfterArgParsing()
    }
 }
 
-private fun openDatabaseAndRunCommands(args: Array<String>, commands: (pl: PersistenceLayer) -> Unit) {
-   var dbFile: File? = null
-   var i = 0
-   for (arg in args) {
-      if (arg == "--db") {
-         if (i + 1 <= args.lastIndex) {
-            dbFile = File(args[i + 1])
-            break
-         } else {
-            logger.error("Argument --db has no value!")
-            return
-         }
-      }
-      i++
-   }
-
+private fun openDatabaseAndRunCommands(dbFile_: File?, commands: (pl: PersistenceLayer) -> Unit) {
+   var dbFile = dbFile_
    if (dbFile == null) dbFile = File("IndexedFiles")
    val inMemoryDb = dbFile.name == ":memory:"
    if (!inMemoryDb) {
@@ -135,7 +134,7 @@ private fun openDatabaseAndRunCommands(args: Array<String>, commands: (pl: Persi
 
 @Suppress("DuplicatedCode")
 private fun createParser(toplevel: Boolean,
-                         parentGlobalParams: GlobalParams?,
+                         globalParams: GlobalParams,
                          outerCallback: ((PersistenceLayer, List<FileLocation>?, Boolean) -> List<FileLocation>?) -> Unit): ArgParser<GlobalParams> {
 
    fun ArgParserBuilder<*>.addConfigParamsForIndexFiles() {
@@ -160,13 +159,11 @@ private fun createParser(toplevel: Boolean,
       loggerInfo(property.name, property.get())
    }
 
-   return ArgParserBuilder(parentGlobalParams ?: GlobalParams()).buildWith(ArgParserConfig(ignoreCase = true, noPrefixForActionParams = true)) {
-      val globalParams = paramValues
+   return ArgParserBuilder(globalParams).buildWith(ArgParserConfig(ignoreCase = true, noPrefixForActionParams = true)) {
 
       addActionParser("help", "Show all available options and commands") {
          logger.info(printout())
       }
-
 
       add(globalParams::db, FileParam())
       add(Config.INST::dryRun, BooleanParam())
@@ -545,7 +542,7 @@ private fun processConsoleInputs(console: Console, globalParams: GlobalParams) {
    }
 }
 
-private fun demandedHelp(args: Array<String>, parser: Lazy<ArgParser<GlobalParams>>): Boolean {
+private fun demandedHelp(args: Array<String>, parser: ArgParser<GlobalParams>): Boolean {
    // offer some more options for showing help and to get help for a specific command
    val helpArguments = setOf("/?", "--?", "?", "--help", "help")
    var foundIdx = -1
@@ -557,7 +554,7 @@ private fun demandedHelp(args: Array<String>, parser: Lazy<ArgParser<GlobalParam
          }) {
       val argumentsWithoutHelp = args.toMutableList()
       argumentsWithoutHelp.removeAt(foundIdx)
-      logger.info(parser.value.printout(argumentsWithoutHelp.toTypedArray(), false))
+      logger.info(parser.printout(argumentsWithoutHelp.toTypedArray(), false))
       return true
    }
    return false
