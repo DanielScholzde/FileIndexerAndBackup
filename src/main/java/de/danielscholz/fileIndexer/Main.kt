@@ -465,6 +465,15 @@ private fun createParser(toplevel: Boolean,
          }
       }
 
+      addActionParser("delete") {
+         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+            if (pipelineResult != null) {
+               DeleteFiles().run(pipelineResult)
+            }
+            null
+         }
+      }
+
       addActionParser(Commands.STATUS.command) {
          loggerInfo(globalParams::db)
          loggerInfo(Config.INST::timeZone)
@@ -570,7 +579,7 @@ private fun Array<String>.splitPipes(): List<Array<String>> {
    return result
 }
 
-fun loggerInfo(propertyName: String, propertyValue: Any?) {
+private fun loggerInfo(propertyName: String, propertyValue: Any?) {
    fun convertSingle(value: Any?): String? {
       if (value is String) return "\"$value\""
       if (value is Boolean) return BooleanParam().convertToStr(value)
