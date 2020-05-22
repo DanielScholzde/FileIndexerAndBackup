@@ -404,7 +404,7 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
                add(paramValues::oldDb, FileParam(checkIsFile = true), required = true)
             }) {
          outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
-            ImportOldDatabase(pl).import(paramValues.oldDb!!.canonicalFile, paramValues.mediumSerial, paramValues.mediumDescription)
+            ImportOldDatabase(pl, paramValues.oldDb!!.canonicalFile, paramValues.mediumSerial, paramValues.mediumDescription).import()
          }
       }
 
