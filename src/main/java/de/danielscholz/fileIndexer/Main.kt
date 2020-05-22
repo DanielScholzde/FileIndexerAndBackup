@@ -112,6 +112,7 @@ private fun openDatabaseAndRunCommands(args: Array<String>, commands: (pl: Persi
    logger.debug("Database: $dbFile")
    Database(dbFile.toString()).tryWith { db ->
       val pl = PersistenceLayer(db)
+      logger.info("Perform database integrity check")
       if (pl.db.dbQueryUniqueStr("PRAGMA integrity_check").toLowerCase() != "ok") {
          logger.error("ERROR: Integrity check of database failed! Exit program.")
          throw Exception("Integrity check of database failed! Exit program.")
@@ -546,7 +547,7 @@ private fun processConsoleInputs(console: Console, globalParams: GlobalParams) {
 
 private fun demandedHelp(args: Array<String>, parser: Lazy<ArgParser<GlobalParams>>): Boolean {
    // offer some more options for showing help and to get help for a specific command
-   val helpArguments = setOf("/?", "--?", "?", "--help")
+   val helpArguments = setOf("/?", "--?", "?", "--help", "help")
    var foundIdx = -1
    if (args.anyIndexed { idx, arg ->
             if (arg in helpArguments) {
