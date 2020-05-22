@@ -193,6 +193,12 @@ class DeleteFilesParams {
 
 }
 
+class MoveFilesParams {
+   var basePath: File? = null
+   var toDir: File? = null
+}
+
 class PrintFilesParams {
    var folderOnly: Boolean = true
+   var details: Boolean = true
 }

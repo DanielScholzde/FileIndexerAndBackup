@@ -20,6 +20,7 @@ enum class Commands(val command: String) {
    STATUS("status"),
    FILTER("filter"),
    DELETE("delete"),
+   MOVE("move"),
    PRINT("print"),
    EXIT("exit")
 }

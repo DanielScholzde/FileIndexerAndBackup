@@ -508,9 +508,24 @@ private fun createParser(toplevel: Boolean,
       }
 
       addActionParser(
+            Commands.MOVE.command,
+            ArgParserBuilder(MoveFilesParams()).buildWith {
+               add(paramValues::basePath, FileParam(), required = true)
+               add(paramValues::toDir, FileParam(), required = true)
+            }) {
+         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+            if (pipelineResult != null) {
+               MoveFiles().run(pipelineResult, paramValues.basePath!!, paramValues.toDir!!)
+            }
+            pipelineResult
+         }
+      }
+
+      addActionParser(
             Commands.PRINT.command,
             ArgParserBuilder(PrintFilesParams()).buildWith {
                add(paramValues::folderOnly, BooleanParam())
+               add(paramValues::details, BooleanParam())
             }) {
          outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             if (pipelineResult != null) {
