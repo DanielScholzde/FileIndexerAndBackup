@@ -4,7 +4,7 @@ enum class Commands(val command: String) {
    INDEX_FILES("index"),
    SYNC_FILES("sync"),
    BACKUP_FILES("backup"),
-   DELETE_DUPLICATE_FILES("deleteDuplicates"),
+   FIND_DUPLICATE_FILES("findDuplicates"),
    FIND_FILES_WITH_NO_COPY("findFilesWithNoCopy"),
    CORRECT_DIFF_IN_FILE_MODIFICATION_DATE("correctDiffInFileModificationDate"),
    CORRECT_DIFF_IN_FILE_MODIFICATION_DATE_AND_EXIF_DATE_TAKEN("correctDiffInFileModificationDateAndExifDateTaken"),

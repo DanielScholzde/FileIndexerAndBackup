@@ -3,7 +3,6 @@ package de.danielscholz.fileIndexer
 import de.danielscholz.fileIndexer.actions.IndexFiles
 import de.danielscholz.kargparser.Description
 import java.io.File
-import java.util.*
 
 class GlobalParams {
    @Description("Database file")
@@ -107,9 +106,6 @@ class DeleteDuplicateFilesParams {
    @Description("Directories")
    var dirs: List<File> = listOf()
    var inclFilenameOnCompare: Boolean = false
-   var printOnlyDeleted: Boolean = false
-   var deleteDuplicates: Boolean = false
-   var deletePathFilter: String? = null
 }
 
 class FindFilesWithNoCopyParams {

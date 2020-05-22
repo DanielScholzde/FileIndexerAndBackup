@@ -44,7 +44,10 @@ internal fun main(args: Array<String>,
       (LoggerFactory.getILoggerFactory() as ch.qos.logback.classic.LoggerContext).stop()
    }
 
-   val parser = createParser(toplevel, parentGlobalParams) { globalParams: GlobalParams, command: (PersistenceLayer) -> Unit ->
+   val argsSplitOnPipes = args.splitPipes()
+   var commandResult: List<File>? = null
+
+   val parser = createParser(toplevel, parentGlobalParams) { globalParams: GlobalParams, command: (PersistenceLayer, Boolean) -> List<File>? ->
       setRootLoggerLevel()
       registerLowMemoryListener()
 
@@ -76,7 +79,7 @@ internal fun main(args: Array<String>,
                logger.info("-------- Dry run, no write changes are made to files ---------")
             }
             runBeforeCmd(pl)
-            command(pl)
+            commandResult = command(pl, argsSplitOnPipes.size > 1)
             runAfterCmd(pl)
          } else {
             logger.error("ERROR: The version of the database ${db.dbVersion} does not match the current program version (${Global.programVersion}). Please update the program.")
@@ -89,7 +92,9 @@ internal fun main(args: Array<String>,
    try {
       if (!demandedHelp(args, parser)) {
          runBeforeArgParsing()
-         parser.parseArgs(args)
+         argsSplitOnPipes.forEach {
+            parser.parseArgs(it)
+         }
          runAfterArgParsing()
       }
    } catch (e: ArgParseException) {
@@ -99,7 +104,9 @@ internal fun main(args: Array<String>,
 }
 
 @Suppress("DuplicatedCode")
-private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, outerCallback: (GlobalParams, (PersistenceLayer) -> Unit) -> Unit): ArgParser<GlobalParams> {
+private fun createParser(toplevel: Boolean,
+                         parentGlobalParams: GlobalParams?,
+                         outerCallback: (GlobalParams, (PersistenceLayer, Boolean) -> List<File>?) -> Unit): ArgParser<GlobalParams> {
 
    fun ArgParserBuilder<*>.addConfigParamsForIndexFiles() {
       add(Config.INST::fastMode, BooleanParam())
@@ -166,7 +173,7 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
                add(paramValues::includedPaths, StringListParam(mapper = { it.replace('\\', '/').removePrefix("/").removeSuffix("/") }))
                addNamelessLast(paramValues::dir, FileParam(true), required = true)
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
+         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
             IndexFiles(paramValues.dir!!.canonicalFile,
                        paramValues.includedPaths,
                        paramValues.lastIndexDir?.canonicalFile,
@@ -176,6 +183,7 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
                        paramValues.updateHardlinksInLastIndex,
                        paramValues.readConfig,
                        pl).run()
+            null
          }
       }
 
@@ -195,7 +203,7 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
                addNamelessLast(paramValues::sourceDir, FileParam(checkIsDir = true), required = true)
                addNamelessLast(paramValues::targetDir, FileParam(checkIsDir = true), required = true)
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
+         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
             SyncFiles(pl).run(
                   paramValues.sourceDir!!.canonicalFile,
                   paramValues.targetDir!!.canonicalFile,
@@ -208,6 +216,7 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
                   paramValues.indexArchiveContentsOfSourceDir,
                   paramValues.sourceReadConfig,
                   paramValues.targetReadConfig)
+            null
          }
       }
 
@@ -227,7 +236,7 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
                addNamelessLast(paramValues::sourceDir, FileParam(checkIsDir = true), required = true)
                addNamelessLast(paramValues::targetDir, FileParam(checkIsDir = true), required = true)
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
+         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
             BackupFiles(pl).run(
                   paramValues.sourceDir!!.canonicalFile,
                   paramValues.targetDir!!.canonicalFile,
@@ -239,6 +248,7 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
                   paramValues.indexArchiveContentsOfSourceDir,
                   paramValues.skipIndexFilesOfSourceDir,
                   paramValues.sourceReadConfig)
+            null
          }
       }
 
@@ -253,8 +263,9 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
             {
                Config.INST.fastMode = false // deactivate fastMode only on verify as default
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
+         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
             VerifyFiles(pl, true).run(paramValues.dir!!.canonicalFile)
+            null
          }
       }
 
@@ -264,27 +275,22 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
                addNamelessLast(paramValues::indexNr1, IntParam(), required = true)
                addNamelessLast(paramValues::indexNr2, IntParam(), required = true)
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
+         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
             CompareIndexRuns(pl).run(paramValues.indexNr1.toLong(), paramValues.indexNr2.toLong())
+            null
          }
       }
 
       addActionParser(
-            Commands.DELETE_DUPLICATE_FILES.command,
+            Commands.FIND_DUPLICATE_FILES.command,
             ArgParserBuilder(DeleteDuplicateFilesParams()).buildWith {
-               add(paramValues::deleteDuplicates, BooleanParam())
                add(paramValues::inclFilenameOnCompare, BooleanParam())
-               add(paramValues::printOnlyDeleted, BooleanParam())
-               add(paramValues::deletePathFilter, StringParam())
                addNamelessLast(paramValues::dirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
-            DeleteDuplicateFiles(pl).run(
+         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
+            FindDuplicateFiles(pl).run(
                   paramValues.dirs.map { it.canonicalFile },
-                  paramValues.deleteDuplicates,
-                  paramValues.deletePathFilter,
-                  paramValues.inclFilenameOnCompare,
-                  paramValues.printOnlyDeleted)
+                  paramValues.inclFilenameOnCompare)
          }
       }
 
@@ -295,11 +301,12 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
                addNamelessLast(paramValues::referenceDir, FileParam(true), required = true)
                addNamelessLast(paramValues::toSearchInDirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
+         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
             FindFilesWithNoCopy(pl).run(
                   paramValues.referenceDir!!.canonicalFile,
                   paramValues.toSearchInDirs.map { it.canonicalFile },
                   paramValues.reverse)
+            null
          }
       }
 
@@ -310,11 +317,12 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
                addNamelessLast(paramValues::referenceDir, FileParam(true), required = true)
                addNamelessLast(paramValues::toSearchInDirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
+         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
             CorrectDiffInFileModificationDate(pl).run(
                   paramValues.referenceDir!!.canonicalFile,
                   paramValues.toSearchInDirs.map { it.canonicalFile },
                   paramValues.ignoreMilliseconds)
+            null
          }
       }
 
@@ -325,11 +333,12 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
                add(paramValues::ignoreHoursDiff, IntParam())
                addNamelessLast(paramValues::dirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
+         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
             CorrectDiffInFileModificationDateAndExifDateTaken(pl).run(
                   paramValues.dirs.map { it.canonicalFile },
                   paramValues.ignoreSecondsDiff,
                   paramValues.ignoreHoursDiff)
+            null
          }
       }
 
@@ -338,9 +347,10 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
             ArgParserBuilder(RenameFilesToModificationDateParams()).buildWith {
                addNamelessLast(paramValues::dirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
+         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
             RenameFilesToModificationDate(pl).run(
                   paramValues.dirs.map { it.canonicalFile })
+            null
          }
       }
 
@@ -349,8 +359,9 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
             ArgParserBuilder(ListIndexRunsParams()).buildWith {
                addNamelessLast(paramValues::dir, FileParam())
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
+         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
             ListIndexRuns(pl).run(paramValues.dir?.canonicalFile)
+            null
          }
       }
 
@@ -359,8 +370,9 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
             ArgParserBuilder(ListPathsParams()).buildWith {
                addNamelessLast(paramValues::dir, FileParam(), required = true)
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
+         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
             ListPaths(pl).run(paramValues.dir!!.canonicalFile)
+            null
          }
       }
 
@@ -370,7 +382,7 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
                addNamelessLast(paramValues::indexNr, IntParam())
                addNamelessLast(paramValues::indexNrRange, IntRangeParam())
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
+         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
             when {
                paramValues.indexNr != null      -> {
                   RemoveIndexRun(pl).removeIndexRun(paramValues.indexNr!!.toLong())
@@ -387,12 +399,14 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
                   logger.warn("a indexNr must be provided!")
                }
             }
+            null
          }
       }
 
       addActionParser(Commands.SHOW_DATABASE_REPORT.command) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
+         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
             ShowDatabaseReport(pl).getOverview()
+            null
          }
       }
 
@@ -403,8 +417,9 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
                add(paramValues::mediumDescription, StringParam())
                add(paramValues::oldDb, FileParam(checkIsFile = true), required = true)
             }) {
-         outerCallback.invoke(globalParams) { pl: PersistenceLayer ->
+         outerCallback.invoke(globalParams) { pl: PersistenceLayer, provideResult: Boolean ->
             ImportOldDatabase(pl, paramValues.oldDb!!.canonicalFile, paramValues.mediumSerial, paramValues.mediumDescription).import()
+            null
          }
       }
 
@@ -437,24 +452,6 @@ private fun createParser(toplevel: Boolean, parentGlobalParams: GlobalParams?, o
          }
       }
    }
-}
-
-private fun demandedHelp(args: Array<String>, parser: ArgParser<GlobalParams>): Boolean {
-   // offer some more options for showing help and to get help for a specific command
-   val helpArguments = setOf("/?", "--?", "?", "--help")
-   var foundIdx = -1
-   if (args.anyIndexed { idx, arg ->
-            if (arg in helpArguments) {
-               foundIdx = idx
-               true
-            } else false
-         }) {
-      val argumentsWithoutHelp = args.toMutableList()
-      argumentsWithoutHelp.removeAt(foundIdx)
-      logger.info(parser.printout(argumentsWithoutHelp.toTypedArray(), false))
-      return true
-   }
-   return false
 }
 
 private fun processConsoleInputs(console: Console, globalParams: GlobalParams) {
@@ -494,6 +491,41 @@ private fun processConsoleInputs(console: Console, globalParams: GlobalParams) {
          )
       }
    }
+}
+
+private fun demandedHelp(args: Array<String>, parser: ArgParser<GlobalParams>): Boolean {
+   // offer some more options for showing help and to get help for a specific command
+   val helpArguments = setOf("/?", "--?", "?", "--help")
+   var foundIdx = -1
+   if (args.anyIndexed { idx, arg ->
+            if (arg in helpArguments) {
+               foundIdx = idx
+               true
+            } else false
+         }) {
+      val argumentsWithoutHelp = args.toMutableList()
+      argumentsWithoutHelp.removeAt(foundIdx)
+      logger.info(parser.printout(argumentsWithoutHelp.toTypedArray(), false))
+      return true
+   }
+   return false
+}
+
+private fun Array<String>.splitPipes(): List<Array<String>> {
+   var args = this
+   val result = mutableListOf<Array<String>>()
+   while (args.contains("|")) {
+      val indexOf = args.indexOf("|")
+      if (indexOf >= 0) {
+         if (indexOf > 0) {
+            val copy1 = this.copyOfRange(0, indexOf)
+            result.add(copy1)
+         }
+         args = args.copyOfRange(indexOf + 1, args.size)
+      } else throw IllegalStateException()
+   }
+   if (args.isNotEmpty()) result.add(args)
+   return result
 }
 
 fun loggerInfo(propertyName: String, propertyValue: Any?) {
