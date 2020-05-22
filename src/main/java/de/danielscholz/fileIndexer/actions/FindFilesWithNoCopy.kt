@@ -18,13 +18,13 @@ class FindFilesWithNoCopy(private val pl: PersistenceLayer) {
 
    private val logger = LoggerFactory.getLogger(this.javaClass)
 
-   fun run(referenceDir: File, toSearchInDirs: List<File>, reverse: Boolean) {
+   fun run(referenceDir: File, toSearchInDirs: List<File>, reverse: Boolean): List<FileLocation> {
 
       val filesReference: Sequence<FileLocation> = pl.loadFileLocationsForPath("auto", referenceDir, true, true).asSequence().filterEmptyFiles()
 
       val filesToSearchIn: Sequence<FileLocation> = pl.loadFileLocationsForPaths("auto", toSearchInDirs, true, true).asSequence().filterEmptyFiles()
 
-      val result = if (!reverse) {
+      val foundFiles = if (!reverse) {
          filesReference.subtract(filesToSearchIn, HASH + FILE_SIZE, true)
       } else {
          filesToSearchIn.subtract(filesReference, HASH + FILE_SIZE, true)
@@ -38,8 +38,9 @@ class FindFilesWithNoCopy(private val pl: PersistenceLayer) {
          }
       }
 
+      val result = mutableListOf<FileLocation>()
       val count = AtomicInteger()
-      result
+      foundFiles
          .sortedBy { fileLocation -> fileLocation.getFullFilePath() }
          .forEach {
             if (Config.INST.verbose) {
@@ -48,11 +49,14 @@ class FindFilesWithNoCopy(private val pl: PersistenceLayer) {
                logger.info(it.getFullFilePath())
             }
             count.incrementAndGet()
+            result.add(it)
          }
 
       if (Config.INST.verbose) {
          logger.info("${count.get()} results")
       }
+
+      return result
    }
 
 }

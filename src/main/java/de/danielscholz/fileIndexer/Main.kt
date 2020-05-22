@@ -334,7 +334,6 @@ private fun createParser(toplevel: Boolean,
                   paramValues.referenceDir!!.canonicalFile,
                   paramValues.toSearchInDirs.map { it.canonicalFile },
                   paramValues.reverse)
-            null
          }
       }
 
