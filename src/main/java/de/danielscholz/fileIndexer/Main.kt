@@ -55,16 +55,21 @@ internal fun main(args: Array<String>,
    }
 
    val globalParams = parentGlobalParams ?: GlobalParams()
-
-   val parserWithNoCommandProcessing = createParser(toplevel, globalParams) { _ -> }
+   var lastHadResult: Boolean
+   val parserWithNoCommandProcessing = createParser(toplevel, globalParams) { hasResult: Boolean, _ -> lastHadResult = hasResult }
 
    if (!demandedHelp(argsSplittetOnPipes[0], parserWithNoCommandProcessing)) {
       runBeforeArgParsing()
 
       try {
          // test all program arguments with a parser doing no command (globalParams are set!)
-         argsSplittetOnPipes.forEach {
-            parserWithNoCommandProcessing.parseArgs(it)
+         argsSplittetOnPipes.forEachIndexed { index, argsSlice ->
+            lastHadResult = false
+            parserWithNoCommandProcessing.parseArgs(argsSlice)
+            if (!lastHadResult && index < argsSplittetOnPipes.lastIndex) {
+               logger.error("Pipeline is broken: ${argsSlice.joinToString(" ")} has no result!")
+               return
+            }
          }
 
          openDatabaseAndRunCommands(globalParams.db) { pl: PersistenceLayer ->
@@ -72,7 +77,7 @@ internal fun main(args: Array<String>,
             var commandResult: List<FileLocation>? = null
 
             // create parser which executes commands. This parser should not throw a ArgParseException.
-            val parser = createParser(toplevel, globalParams) { command: (PersistenceLayer, List<FileLocation>?, Boolean) -> List<FileLocation>? ->
+            val parser = createParser(toplevel, globalParams) { hasResult: Boolean, command: (PersistenceLayer, List<FileLocation>?, Boolean) -> List<FileLocation>? ->
                setRootLoggerLevel()
 
                if (Config.INST.dryRun) {
@@ -136,7 +141,7 @@ private fun openDatabaseAndRunCommands(dbFile_: File?, commands: (pl: Persistenc
 @Suppress("DuplicatedCode")
 private fun createParser(toplevel: Boolean,
                          globalParams: GlobalParams,
-                         outerCallback: ((PersistenceLayer, List<FileLocation>?, Boolean) -> List<FileLocation>?) -> Unit): ArgParser<GlobalParams> {
+                         outerCallback: (Boolean, (PersistenceLayer, List<FileLocation>?, Boolean) -> List<FileLocation>?) -> Unit): ArgParser<GlobalParams> {
 
    fun ArgParserBuilder<*>.addConfigParamsForIndexFiles() {
       add(Config.INST::fastMode, BooleanParam())
@@ -201,7 +206,7 @@ private fun createParser(toplevel: Boolean,
                add(paramValues::includedPaths, StringListParam(mapper = { it.replace('\\', '/').removePrefix("/").removeSuffix("/") }))
                addNamelessLast(paramValues::dir, FileParam(true), required = true)
             }) {
-         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+         outerCallback.invoke(false) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             IndexFiles(paramValues.dir!!.canonicalFile,
                        paramValues.includedPaths,
                        paramValues.lastIndexDir?.canonicalFile,
@@ -231,7 +236,7 @@ private fun createParser(toplevel: Boolean,
                addNamelessLast(paramValues::sourceDir, FileParam(checkIsDir = true), required = true)
                addNamelessLast(paramValues::targetDir, FileParam(checkIsDir = true), required = true)
             }) {
-         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+         outerCallback.invoke(false) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             SyncFiles(pl).run(
                   paramValues.sourceDir!!.canonicalFile,
                   paramValues.targetDir!!.canonicalFile,
@@ -264,7 +269,7 @@ private fun createParser(toplevel: Boolean,
                addNamelessLast(paramValues::sourceDir, FileParam(checkIsDir = true), required = true)
                addNamelessLast(paramValues::targetDir, FileParam(checkIsDir = true), required = true)
             }) {
-         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+         outerCallback.invoke(false) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             BackupFiles(pl).run(
                   paramValues.sourceDir!!.canonicalFile,
                   paramValues.targetDir!!.canonicalFile,
@@ -291,7 +296,7 @@ private fun createParser(toplevel: Boolean,
             {
                Config.INST.fastMode = false // deactivate fastMode only on verify as default
             }) {
-         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+         outerCallback.invoke(false) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             VerifyFiles(pl, true).run(paramValues.dir!!.canonicalFile)
             null
          }
@@ -304,7 +309,7 @@ private fun createParser(toplevel: Boolean,
                addNamelessLast(paramValues::indexNr2, IntParam(), required = true)
                addNamelessLast(paramValues::result, EnumParam(CompareIndexRunsParams.CompareIndexRunsResult.LEFT))
             }) {
-         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+         outerCallback.invoke(true) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             CompareIndexRuns(pl).run(paramValues.indexNr1.toLong(), paramValues.indexNr2.toLong(), paramValues.result)
          }
       }
@@ -315,7 +320,7 @@ private fun createParser(toplevel: Boolean,
                add(paramValues::inclFilenameOnCompare, BooleanParam())
                addNamelessLast(paramValues::dirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
-         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+         outerCallback.invoke(true) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             FindDuplicateFiles(pl).run(
                   paramValues.dirs.map { it.canonicalFile },
                   paramValues.inclFilenameOnCompare)
@@ -329,7 +334,7 @@ private fun createParser(toplevel: Boolean,
                addNamelessLast(paramValues::referenceDir, FileParam(true), required = true)
                addNamelessLast(paramValues::toSearchInDirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
-         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+         outerCallback.invoke(true) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             FindFilesWithNoCopy(pl).run(
                   paramValues.referenceDir!!.canonicalFile,
                   paramValues.toSearchInDirs.map { it.canonicalFile },
@@ -344,7 +349,7 @@ private fun createParser(toplevel: Boolean,
                addNamelessLast(paramValues::referenceDir, FileParam(true), required = true)
                addNamelessLast(paramValues::toSearchInDirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
-         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+         outerCallback.invoke(false) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             CorrectDiffInFileModificationDate(pl).run(
                   paramValues.referenceDir!!.canonicalFile,
                   paramValues.toSearchInDirs.map { it.canonicalFile },
@@ -360,7 +365,7 @@ private fun createParser(toplevel: Boolean,
                add(paramValues::ignoreHoursDiff, IntParam())
                addNamelessLast(paramValues::dirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
-         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+         outerCallback.invoke(false) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             CorrectDiffInFileModificationDateAndExifDateTaken(pl).run(
                   paramValues.dirs.map { it.canonicalFile },
                   paramValues.ignoreSecondsDiff,
@@ -374,7 +379,7 @@ private fun createParser(toplevel: Boolean,
             ArgParserBuilder(RenameFilesToModificationDateParams()).buildWith {
                addNamelessLast(paramValues::dirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
-         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+         outerCallback.invoke(false) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             RenameFilesToModificationDate(pl).run(
                   paramValues.dirs.map { it.canonicalFile })
             null
@@ -386,7 +391,7 @@ private fun createParser(toplevel: Boolean,
             ArgParserBuilder(ListIndexRunsParams()).buildWith {
                addNamelessLast(paramValues::dir, FileParam())
             }) {
-         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+         outerCallback.invoke(false) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             ListIndexRuns(pl).run(paramValues.dir?.canonicalFile)
             null
          }
@@ -397,7 +402,7 @@ private fun createParser(toplevel: Boolean,
             ArgParserBuilder(ListPathsParams()).buildWith {
                addNamelessLast(paramValues::dir, FileParam(), required = true)
             }) {
-         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+         outerCallback.invoke(false) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             ListPaths(pl).run(paramValues.dir!!.canonicalFile)
             null
          }
@@ -409,7 +414,7 @@ private fun createParser(toplevel: Boolean,
                addNamelessLast(paramValues::indexNr, IntParam())
                addNamelessLast(paramValues::indexNrRange, IntRangeParam())
             }) {
-         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+         outerCallback.invoke(false) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             when {
                paramValues.indexNr != null      -> {
                   RemoveIndexRun(pl).removeIndexRun(paramValues.indexNr!!.toLong())
@@ -431,7 +436,7 @@ private fun createParser(toplevel: Boolean,
       }
 
       addActionParser(Commands.SHOW_DATABASE_REPORT.command) {
-         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+         outerCallback.invoke(false) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             ShowDatabaseReport(pl).getOverview()
             null
          }
@@ -444,7 +449,7 @@ private fun createParser(toplevel: Boolean,
                add(paramValues::mediumDescription, StringParam())
                add(paramValues::oldDb, FileParam(checkIsFile = true), required = true)
             }) {
-         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+         outerCallback.invoke(false) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             ImportOldDatabase(pl, paramValues.oldDb!!.canonicalFile, paramValues.mediumSerial, paramValues.mediumDescription).import()
             null
          }
@@ -486,7 +491,7 @@ private fun createParser(toplevel: Boolean,
             ArgParserBuilder(FilterFilesParams()).buildWith {
                add(paramValues::pathFilter, StringParam(), required = true)
             }) {
-         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+         outerCallback.invoke(true) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             if (pipelineResult != null) {
                return@invoke FilterFiles().run(pipelineResult, paramValues.pathFilter!!)
             }
@@ -498,7 +503,7 @@ private fun createParser(toplevel: Boolean,
             Commands.DELETE.command,
             ArgParserBuilder(DeleteFilesParams()).buildWith {
             }) {
-         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+         outerCallback.invoke(true) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             if (pipelineResult != null) {
                DeleteFiles().run(pipelineResult)
             }
@@ -512,7 +517,7 @@ private fun createParser(toplevel: Boolean,
                add(paramValues::basePath, FileParam(), required = true)
                add(paramValues::toDir, FileParam(), required = true)
             }) {
-         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+         outerCallback.invoke(true) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             if (pipelineResult != null) {
                MoveFiles().run(pipelineResult, paramValues.basePath!!, paramValues.toDir!!)
             }
@@ -526,7 +531,7 @@ private fun createParser(toplevel: Boolean,
                add(paramValues::folderOnly, BooleanParam())
                add(paramValues::details, BooleanParam())
             }) {
-         outerCallback.invoke { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
+         outerCallback.invoke(true) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             if (pipelineResult != null) {
                PrintFiles(paramValues).run(pipelineResult)
             }
