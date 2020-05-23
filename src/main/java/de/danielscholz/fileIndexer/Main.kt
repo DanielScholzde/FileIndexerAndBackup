@@ -310,7 +310,7 @@ private fun createParser(toplevel: Boolean,
             ArgParserBuilder(CompareIndexRunsParams()).buildWith {
                addNamelessLast(paramValues::indexNr1, IntParam(), required = true)
                addNamelessLast(paramValues::indexNr2, IntParam(), required = true)
-               addNamelessLast(paramValues::result, EnumParam(CompareIndexRunsParams.CompareIndexRunsResult.LEFT))
+               addNamelessLast(paramValues::result, EnumParam(CompareIndexRunsParams.CompareIndexRunsResult::class.java))
             }) {
          outerCallback.invoke(true) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             CompareIndexRuns(pl).run(paramValues.indexNr1.toLong(), paramValues.indexNr2.toLong(), paramValues.result)
@@ -495,11 +495,19 @@ private fun createParser(toplevel: Boolean,
             Commands.FILTER.command,
             ArgParserBuilder(FilterFilesParams()).buildWith {
                add(paramValues::isJavaRegex, BooleanParam())
-               addNamelessLast(paramValues::pathFilter, StringParam(), required = true)
+               add(paramValues::path, StringParam())
+               add(paramValues::file, StringParam())
+               add(paramValues::minSize, FileSizeParam())
+               add(paramValues::maxSize, FileSizeParam())
             }) {
          outerCallback.invoke(true) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             if (pipelineResult != null) {
-               return@invoke FilterFiles().run(pipelineResult, paramValues.pathFilter!!, paramValues.isJavaRegex)
+               return@invoke FilterFiles().run(pipelineResult,
+                                               paramValues.path,
+                                               paramValues.file,
+                                               paramValues.isJavaRegex,
+                                               paramValues.minSize,
+                                               paramValues.maxSize)
             }
             null
          }
@@ -541,7 +549,7 @@ private fun createParser(toplevel: Boolean,
             }) {
          outerCallback.invoke(true) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             if (pipelineResult != null) {
-               PrintFiles(paramValues).run(pipelineResult)
+               PrintFiles().run(pipelineResult, paramValues.folderOnly, paramValues.details)
             }
             pipelineResult
          }

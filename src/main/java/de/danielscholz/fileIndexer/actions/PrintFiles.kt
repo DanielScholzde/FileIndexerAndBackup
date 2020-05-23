@@ -1,19 +1,18 @@
 package de.danielscholz.fileIndexer.actions
 
-import de.danielscholz.fileIndexer.PrintFilesParams
 import de.danielscholz.fileIndexer.common.formatAsFileSize
 import de.danielscholz.fileIndexer.persistence.FileLocation
 import de.danielscholz.fileIndexer.persistence.getFullFilePath
 import de.danielscholz.fileIndexer.persistence.getFullPath
 import org.slf4j.LoggerFactory
 
-class PrintFiles(private val params: PrintFilesParams) {
+class PrintFiles() {
 
    private val logger = LoggerFactory.getLogger(javaClass)
 
-   fun run(files: List<FileLocation>) {
-      if (params.folderOnly) {
-         if (params.details) {
+   fun run(files: List<FileLocation>, folderOnly: Boolean, details: Boolean) {
+      if (folderOnly) {
+         if (details) {
             files.asSequence().map { it.getFullPath() to it }.groupingBy { it.first }.fold(0L) { accumulator: Long, element: Pair<String, FileLocation> ->
                accumulator + (element.second.fileContent?.fileSize ?: 0L)
             }.entries.sortedBy { it.key }.forEach {

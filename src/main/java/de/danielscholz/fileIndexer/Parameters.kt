@@ -105,6 +105,7 @@ class BackupFilesParams {
 class DeleteDuplicateFilesParams {
    @Description("Reference Directory")
    var referenceDir: File? = null
+
    @Description("Directories to search for duplicates")
    var toSearchInDirs: List<File> = listOf()
    var inclFilenameOnCompare: Boolean = false
@@ -192,8 +193,11 @@ class ImportOldDbParams {
 
 class FilterFilesParams {
    @Description("Filter")
-   var pathFilter: String? = null
+   var path: String? = null
+   var file: String? = null
    var isJavaRegex: Boolean = false
+   var minSize: Long? = null
+   var maxSize: Long? = null
 }
 
 class DeleteFilesParams {
