@@ -103,8 +103,10 @@ class BackupFilesParams {
 }
 
 class DeleteDuplicateFilesParams {
-   @Description("Directories")
-   var dirs: List<File> = listOf()
+   @Description("Reference Directory")
+   var referenceDir: File? = null
+   @Description("Directories to search for duplicates")
+   var toSearchInDirs: List<File> = listOf()
    var inclFilenameOnCompare: Boolean = false
 }
 

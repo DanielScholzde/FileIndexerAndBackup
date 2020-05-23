@@ -321,11 +321,13 @@ private fun createParser(toplevel: Boolean,
             Commands.FIND_DUPLICATE_FILES.command,
             ArgParserBuilder(DeleteDuplicateFilesParams()).buildWith {
                add(paramValues::inclFilenameOnCompare, BooleanParam())
-               addNamelessLast(paramValues::dirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
+               addNamelessLast(paramValues::referenceDir, FileParam(true), required = true)
+               addNamelessLast(paramValues::toSearchInDirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
          outerCallback.invoke(true) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             FindDuplicateFiles(pl).run(
-                  paramValues.dirs.map { it.canonicalFile },
+                  paramValues.referenceDir!!.canonicalFile,
+                  paramValues.toSearchInDirs.map { it.canonicalFile },
                   paramValues.inclFilenameOnCompare)
          }
       }
@@ -492,8 +494,8 @@ private fun createParser(toplevel: Boolean,
       addActionParser(
             Commands.FILTER.command,
             ArgParserBuilder(FilterFilesParams()).buildWith {
-               add(paramValues::pathFilter, StringParam(), required = true)
                add(paramValues::isJavaRegex, BooleanParam())
+               addNamelessLast(paramValues::pathFilter, StringParam(), required = true)
             }) {
          outerCallback.invoke(true) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             if (pipelineResult != null) {

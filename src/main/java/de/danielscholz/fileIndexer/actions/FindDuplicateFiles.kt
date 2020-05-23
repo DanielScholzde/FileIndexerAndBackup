@@ -10,29 +10,39 @@ class FindDuplicateFiles(private val pl: PersistenceLayer) {
 
    private val logger = LoggerFactory.getLogger(this.javaClass)
 
-   fun run(dirs: List<File>, inclFilenameOnCompare: Boolean): List<FileLocation> {
+   fun run(referenceDir: File, toSearchInDirs: List<File>, inclFilenameOnCompare: Boolean): List<FileLocation> {
 
-      if (dirs.size < 2) {
-         logger.error("At least two directories must be specified")
+      if (toSearchInDirs.isEmpty()) {
+         logger.error("At least one directory to search in must be specified")
          return listOf()
       }
-      val paths = mutableListOf<IndexRunFilePathResult>()
-      for (dir in dirs.map { dir -> dir.canonicalFile }) {
+
+      var pathReference: IndexRunFilePathResult? = null
+      val pathRefResult = pl.getNewestPath("auto", referenceDir.canonicalFile, true)
+      if (pathRefResult != null) {
+         pathReference = pathRefResult
+      } else {
+         logger.error("The path \"$referenceDir\" could not be found in any file index layer")
+      }
+
+      val pathsToSearchIn = mutableListOf<IndexRunFilePathResult>()
+      for (dir in toSearchInDirs.map { dir -> dir.canonicalFile }) {
          val pathResult = pl.getNewestPath("auto", dir, true)
          if (pathResult != null) {
-            paths.add(pathResult)
+            pathsToSearchIn.add(pathResult)
          } else {
             logger.error("The path \"$dir\" could not be found in any file index layer")
          }
       }
-      if (paths.size != dirs.size) return listOf()
+      if (pathsToSearchIn.size != toSearchInDirs.size || pathReference == null) return listOf()
 
-      val hasOnlyPartialHash = paths.filter { it.indexRun.onlyReadFirstMbOfContentForHash != null }.count() > 0
+      val hasOnlyPartialHash = pathsToSearchIn.filter { it.indexRun.onlyReadFirstMbOfContentForHash != null }.count() > 0 ||
+                               pathReference.indexRun.onlyReadFirstMbOfContentForHash != null
       if (hasOnlyPartialHash) {
          logger.warn("ATTENTION: At least one file index set was created with parameter createHashOnlyForFirstMb!")
       }
 
-      return find(paths,
+      return find(pathReference, pathsToSearchIn,
                   Intersect(MatchMode.FILE_SIZE +
                             (if (hasOnlyPartialHash) MatchMode.HASH_BEGIN_1MB else MatchMode.HASH) +
                             (if (inclFilenameOnCompare) MatchMode.FILENAME else MatchMode.FILE_SIZE), true),
@@ -41,24 +51,30 @@ class FindDuplicateFiles(private val pl: PersistenceLayer) {
    }
 
 
-   private fun find(paths: List<IndexRunFilePathResult>,
+   private fun find(pathReference: IndexRunFilePathResult,
+                    pathsToSearchIn: List<IndexRunFilePathResult>,
                     intersect: Intersect,
                     resultFilter: ResultFilter): List<FileLocation> {
-      val foundResult = mutableSetMultimapOf<String, FileLocation>()
+
+      val foundResult = mutableListMultimapOf<String, FileLocation>()
 
       logger.info("Index Layer:")
-      paths.forEach {
+      logger.info(pathReference.indexRun.runDate.convertToLocalZone().toStr() + " " + pathReference.indexRun.pathPrefix + pathReference.indexRun.path)
+      pathsToSearchIn.forEach {
          logger.info(it.indexRun.runDate.convertToLocalZone().toStr() + " " + it.indexRun.pathPrefix + it.indexRun.path)
       }
       logger.info("")
 
-      for (i in 1..paths.lastIndex) {
-         for (findResult2 in intersect.apply(LoadFileLocations(paths[0], pl).load().filterEmptyFiles(),
-                                             LoadFileLocations(paths[i], pl).load().filterEmptyFiles()).filter(resultFilter)) {
-            val fileLoc1 = findResult2.first
-            val fileLoc2 = findResult2.second
-            foundResult.put(createKey(fileLoc1, intersect.mode), fileLoc1)
-            foundResult.put(createKey(fileLoc2, intersect.mode), fileLoc2)
+      val referenceFiles = LoadFileLocations(pathReference, pl).load().filterEmptyFiles()
+      for (i in 0..pathsToSearchIn.lastIndex) {
+         for (findResult2 in intersect.apply(referenceFiles, LoadFileLocations(pathsToSearchIn[i], pl).load().filterEmptyFiles()).filter(resultFilter)) {
+            val fileLocReference = findResult2.first
+            val fileLocToSearchIn = findResult2.second
+            val key = createKey(fileLocReference, intersect.mode)
+            if (foundResult.get(key).isEmpty()) {
+               foundResult.put(key, fileLocReference)
+            }
+            foundResult.put(key, fileLocToSearchIn)
          }
       }
 
@@ -68,7 +84,7 @@ class FindDuplicateFiles(private val pl: PersistenceLayer) {
       val result = mutableListOf<FileLocation>()
 
       for (key in foundResult.keySet()) {
-         val duplicates = foundResult[key]
+         val duplicates: MutableList<FileLocation> = foundResult[key]
          if (duplicates.size < 2) {
             logger.error("ERROR")
             return listOf()
@@ -80,6 +96,9 @@ class FindDuplicateFiles(private val pl: PersistenceLayer) {
                size += it.fileContent!!.fileSize
             }
          }
+
+         val ref = duplicates[0]
+         duplicates.removeAt(0)
 
          for (it in duplicates.map { Triple(it.getFullFilePath(), it.formatOtherData(), it) }.sortedBy { it.first }) {
             var fileExists = true
@@ -93,7 +112,7 @@ class FindDuplicateFiles(private val pl: PersistenceLayer) {
                }
             }
 
-            logger.info(it.first + it.second + (if (!fileExists) " (File doesn't exists)" else ""))
+            logger.info(it.first + it.second + (if (!fileExists) " (File doesn't exists)" else "") + " is duplicate to " + ref.getFullFilePath())
          }
          logger.info("")
       }

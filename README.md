@@ -15,13 +15,18 @@ Because all file information is stored in a database, you have information about
 (test if a bit rot happened or files got lost).
 
 Other features are:
+- support for pipeline execution of commands and filters (not all commands are supported yet)
 - index files within archives (7z, zip, tar, tar.gz, jar)
 - synchronize files between two folders (one-way sync)
+- find duplicate files and delete or move them
+- find files with no copy elsewhere 
 - compare two index runs / folders
 - read EXIF information of images (incl. raw images), for example to check if the file modification date is the same as the date taken and to 
 correct it
 - implement your own tasks or backup strategy with ease
 - mediums are recognized and indexed by their volume serial number
+- support for "dry-run"
+- confirmation for file deletions / moves
 
 Future plans:
 - customizable two-way sync between two folders
@@ -54,3 +59,8 @@ Integrated console:
     > backupIndex.db /my/sourcePath /my/backup/targetPath
     ...
     > exit
+    
+Find duplicates and delete them (example for pipelining of commands and filters):
+
+    findDuplicates /reference/path /path/to/search/for/duplicates | filter **.jpg | print --folderOnly:false | delete
+   
