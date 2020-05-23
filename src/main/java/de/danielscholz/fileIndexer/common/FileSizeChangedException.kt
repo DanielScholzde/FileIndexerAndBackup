@@ -1,5 +1,0 @@
-package de.danielscholz.fileIndexer.common
-
-import java.io.IOException
-
-class FileSizeChangedException : IOException("File size changed!")

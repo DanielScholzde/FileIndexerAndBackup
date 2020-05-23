@@ -191,15 +191,17 @@ class ImportOldDbParams {
 class FilterFilesParams {
    @Description("Filter")
    var pathFilter: String? = null
+   var isJavaRegex: Boolean = false
 }
 
 class DeleteFilesParams {
-
+   var deleteEmptyDirs: Boolean = true
 }
 
 class MoveFilesParams {
    var basePath: File? = null
    var toDir: File? = null
+   var deleteEmptyDirs: Boolean = true
 }
 
 class PrintFilesParams {

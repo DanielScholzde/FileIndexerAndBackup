@@ -93,6 +93,9 @@ internal fun main(args: Array<String>,
                parser.parseArgs(it)
             }
          }
+      } catch (e: CancelPipelineException) {
+         logger.error("Pipeline execution canceled")
+         if (isTest()) throw e // throw exception only in test case
       } catch (e: ArgParseException) {
          logger.info(parserWithNoCommandProcessing.printout(e))
          if (isTest()) throw e // throw exception only in test case
@@ -490,10 +493,11 @@ private fun createParser(toplevel: Boolean,
             Commands.FILTER.command,
             ArgParserBuilder(FilterFilesParams()).buildWith {
                add(paramValues::pathFilter, StringParam(), required = true)
+               add(paramValues::isJavaRegex, BooleanParam())
             }) {
          outerCallback.invoke(true) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             if (pipelineResult != null) {
-               return@invoke FilterFiles().run(pipelineResult, paramValues.pathFilter!!)
+               return@invoke FilterFiles().run(pipelineResult, paramValues.pathFilter!!, paramValues.isJavaRegex)
             }
             null
          }
@@ -502,10 +506,11 @@ private fun createParser(toplevel: Boolean,
       addActionParser(
             Commands.DELETE.command,
             ArgParserBuilder(DeleteFilesParams()).buildWith {
+               add(paramValues::deleteEmptyDirs, BooleanParam())
             }) {
          outerCallback.invoke(true) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             if (pipelineResult != null) {
-               DeleteFiles().run(pipelineResult)
+               DeleteFiles().run(pipelineResult, paramValues.deleteEmptyDirs)
             }
             pipelineResult
          }
@@ -516,10 +521,11 @@ private fun createParser(toplevel: Boolean,
             ArgParserBuilder(MoveFilesParams()).buildWith {
                add(paramValues::basePath, FileParam(), required = true)
                add(paramValues::toDir, FileParam(), required = true)
+               add(paramValues::deleteEmptyDirs, BooleanParam())
             }) {
          outerCallback.invoke(true) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             if (pipelineResult != null) {
-               MoveFiles().run(pipelineResult, paramValues.basePath!!, paramValues.toDir!!)
+               MoveFiles().run(pipelineResult, paramValues.basePath!!, paramValues.toDir!!, paramValues.deleteEmptyDirs)
             }
             pipelineResult
          }

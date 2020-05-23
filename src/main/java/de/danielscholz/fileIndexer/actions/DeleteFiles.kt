@@ -15,7 +15,7 @@ class DeleteFiles {
 
    private val logger = LoggerFactory.getLogger(this.javaClass)
 
-   fun run(files: List<FileLocation>) {
+   fun run(files: List<FileLocation>, deleteEmptyDirs: Boolean) {
       var deletedCount = 0
       var deletedSize = 0L
       var deleteFailedCount = 0
@@ -54,7 +54,9 @@ class DeleteFiles {
                   }
                }
 
-               file.parentFile?.let { pathsWithDeletedFiles.add(it) }
+               if (deleteEmptyDirs) {
+                  file.parentFile?.let { pathsWithDeletedFiles.add(it) }
+               }
                deleted = true
                deletedCount++
                deletedSize += length
