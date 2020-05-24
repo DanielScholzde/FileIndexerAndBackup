@@ -89,8 +89,8 @@ open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
       val params = mutableListOf<String>()
 
       val cond2 = if (mediumSerial != null) {
-         params.add(mediumSerial)
-         "r.mediumSerial = ?"
+         params.add(mediumSerial + "%")
+         "r.mediumSerial like ?"
       } else {
          params.add(pathPrefix!!)
          "lower(r.pathPrefix) = lower(?)"
