@@ -1,6 +1,7 @@
 package de.danielscholz.fileIndexer.actions
 
 import de.danielscholz.fileIndexer.Config
+import de.danielscholz.fileIndexer.common.MyPath
 import de.danielscholz.fileIndexer.matching.MatchMode.FILE_SIZE
 import de.danielscholz.fileIndexer.matching.MatchMode.HASH
 import de.danielscholz.fileIndexer.matching.filterEmptyFiles
@@ -11,18 +12,17 @@ import de.danielscholz.fileIndexer.persistence.PersistenceLayer
 import de.danielscholz.fileIndexer.persistence.getFullFilePath
 import de.danielscholz.fileIndexer.persistence.getMediumDescrFullFilePathAndOtherData
 import org.slf4j.LoggerFactory
-import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 
 class FindFilesWithNoCopy(private val pl: PersistenceLayer) {
 
    private val logger = LoggerFactory.getLogger(this.javaClass)
 
-   fun run(referenceDir: File, toSearchInDirs: List<File>, reverse: Boolean): List<FileLocation> {
+   fun run(referencePath: MyPath, toSearchInPaths: List<MyPath>, reverse: Boolean): List<FileLocation> {
 
-      val filesReference: Sequence<FileLocation> = pl.loadFileLocationsForPath("auto", referenceDir, true, true).asSequence().filterEmptyFiles()
+      val filesReference: Sequence<FileLocation> = pl.loadFileLocationsForPath(referencePath, true, true).asSequence().filterEmptyFiles()
 
-      val filesToSearchIn: Sequence<FileLocation> = pl.loadFileLocationsForPaths("auto", toSearchInDirs, true, true).asSequence().filterEmptyFiles()
+      val filesToSearchIn: Sequence<FileLocation> = pl.loadFileLocationsForPaths(toSearchInPaths, true, true).asSequence().filterEmptyFiles()
 
       val foundFiles = if (!reverse) {
          filesReference.subtract(filesToSearchIn, HASH + FILE_SIZE, true)
@@ -32,9 +32,9 @@ class FindFilesWithNoCopy(private val pl: PersistenceLayer) {
 
       if (Config.INST.verbose) {
          if (reverse) {
-            logger.info("In the directory $referenceDir there are no copies of the following files from the other directories:")
+            logger.info("In the directory $referencePath there are no copies of the following files from the other directories:")
          } else {
-            logger.info("The directory $referenceDir contains the following files, which have no copy in the other directories:")
+            logger.info("The directory $referencePath contains the following files, which have no copy in the other directories:")
          }
       }
 

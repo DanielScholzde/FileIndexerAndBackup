@@ -152,7 +152,7 @@ class ImportOldDatabase(val pl: PersistenceLayer, val oldDbFile: File, val mediu
 
       val fileLocationsConstrainsExisting = HashSet<String>()
       val dir = File(oldDbFile.parent + backupRun.pathPrefix.ensurePrefix("/")) // pathPrefix ist nur Datum, d.h. "2000-01-02"
-      val pathWithoutPrefix = calcPathWithoutPrefix(dir)
+      val pathWithoutPrefix = calcPathWithoutPrefix(dir.path)
       val filePath = pl.getOrInsertFullFilePath(File(pathWithoutPrefix))
 
       logger.info("Importing $dir")
@@ -162,13 +162,14 @@ class ImportOldDatabase(val pl: PersistenceLayer, val oldDbFile: File, val mediu
          return
       }
 
-      val mediumSerialDetermined = getVolumeSerialNr(dir, mediumSerial)
+      val mediumSerialDetermined = mediumSerial ?: getVolumeSerialNr(dir.path)
+                                   ?: throw Exception("MediumSerial of $dir could not be determined. Please specify mediumSerial explicit.")
 
       var indexRun = IndexRun(0,
                               pl,
                               filePath.id,
                               pathWithoutPrefix,
-                              calcFilePathPrefix(dir),
+                              calcFilePathPrefix(dir.path),
                               "",
                               "",
                               "",

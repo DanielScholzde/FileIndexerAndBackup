@@ -201,20 +201,18 @@ private fun createParser(toplevel: Boolean,
             ArgParserBuilder(IndexFilesParams()).buildWith {
                addConfigParamsForIndexFiles()
                add(paramValues::mediumDescription, StringParam())
-               add(paramValues::mediumSerial, StringParam())
                add(paramValues::indexArchiveContents, BooleanParam())
                add(paramValues::updateHardlinksInLastIndex, BooleanParam())
-               add(paramValues::lastIndexDir, FileParam())
+               add(paramValues::lastIndexDir, MyPathParam())
                add(paramValues::readConfig, ReadConfigParam())
                add(paramValues::includedPaths, StringListParam(mapper = { it.replace('\\', '/').removePrefix("/").removeSuffix("/") }))
-               addNamelessLast(paramValues::dir, FileParam(true), required = true)
+               addNamelessLast(paramValues::dir, MyPathParam(true), required = true)
             }) {
          outerCallback.invoke(false) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             IndexFiles(paramValues.dir!!.canonicalFile,
                        paramValues.includedPaths,
                        paramValues.lastIndexDir?.canonicalFile,
                        paramValues.mediumDescription,
-                       paramValues.mediumSerial,
                        paramValues.indexArchiveContents,
                        paramValues.updateHardlinksInLastIndex,
                        paramValues.readConfig,
@@ -230,14 +228,12 @@ private fun createParser(toplevel: Boolean,
                addConfigParamsForSyncOrBackup()
                add(paramValues::mediumDescriptionSource, StringParam())
                add(paramValues::mediumDescriptionTarget, StringParam())
-               add(paramValues::mediumSerialSource, StringParam())
-               add(paramValues::mediumSerialTarget, StringParam())
                add(paramValues::skipIndexFilesOfSourceDir, BooleanParam())
                add(paramValues::sourceReadConfig, ReadConfigParam())
                add(paramValues::targetReadConfig, ReadConfigParam())
                add(paramValues::includedPaths, StringListParam(mapper = { it.replace('\\', '/').removePrefix("/").removeSuffix("/") }))
-               addNamelessLast(paramValues::sourceDir, FileParam(checkIsDir = true), required = true)
-               addNamelessLast(paramValues::targetDir, FileParam(checkIsDir = true), required = true)
+               addNamelessLast(paramValues::sourceDir, MyPathParam(true), required = true)
+               addNamelessLast(paramValues::targetDir, MyPathParam(true), required = true)
             }) {
          outerCallback.invoke(false) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             SyncFiles(pl).run(
@@ -246,8 +242,6 @@ private fun createParser(toplevel: Boolean,
                   paramValues.includedPaths,
                   paramValues.mediumDescriptionSource,
                   paramValues.mediumDescriptionTarget,
-                  paramValues.mediumSerialSource,
-                  paramValues.mediumSerialTarget,
                   paramValues.skipIndexFilesOfSourceDir,
                   paramValues.indexArchiveContentsOfSourceDir,
                   paramValues.sourceReadConfig,
@@ -263,14 +257,12 @@ private fun createParser(toplevel: Boolean,
                addConfigParamsForSyncOrBackup()
                add(paramValues::mediumDescriptionSource, StringParam())
                add(paramValues::mediumDescriptionTarget, StringParam())
-               add(paramValues::mediumSerialSource, StringParam())
-               add(paramValues::mediumSerialTarget, StringParam())
                add(paramValues::skipIndexFilesOfSourceDir, BooleanParam())
                add(paramValues::indexArchiveContentsOfSourceDir, BooleanParam())
                add(paramValues::sourceReadConfig, ReadConfigParam())
                add(paramValues::includedPaths, StringListParam(mapper = { it.replace('\\', '/').removePrefix("/").removeSuffix("/") }))
-               addNamelessLast(paramValues::sourceDir, FileParam(checkIsDir = true), required = true)
-               addNamelessLast(paramValues::targetDir, FileParam(checkIsDir = true), required = true)
+               addNamelessLast(paramValues::sourceDir, MyPathParam(true), required = true)
+               addNamelessLast(paramValues::targetDir, MyPathParam(true), required = true)
             }) {
          outerCallback.invoke(false) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             BackupFiles(pl).run(
@@ -279,8 +271,6 @@ private fun createParser(toplevel: Boolean,
                   paramValues.includedPaths,
                   paramValues.mediumDescriptionSource,
                   paramValues.mediumDescriptionTarget,
-                  paramValues.mediumSerialSource,
-                  paramValues.mediumSerialTarget,
                   paramValues.indexArchiveContentsOfSourceDir,
                   paramValues.skipIndexFilesOfSourceDir,
                   paramValues.sourceReadConfig)
@@ -293,7 +283,7 @@ private fun createParser(toplevel: Boolean,
             ArgParserBuilder(VerifyFilesParams()).buildWith {
                add(Config.INST::fastMode, BooleanParam())
                add(Config.INST::ignoreHashInFastMode, BooleanParam())
-               addNamelessLast(paramValues::dir, FileParam(checkIsDir = true), required = true)
+               addNamelessLast(paramValues::dir, MyPathParam(true), required = true)
             },
             "Verify",
             {
@@ -310,7 +300,7 @@ private fun createParser(toplevel: Boolean,
             ArgParserBuilder(CompareIndexRunsParams()).buildWith {
                addNamelessLast(paramValues::indexNr1, IntParam(), required = true)
                addNamelessLast(paramValues::indexNr2, IntParam(), required = true)
-               addNamelessLast(paramValues::result, EnumParam(CompareIndexRunsParams.CompareIndexRunsResult::class.java))
+               addNamelessLast(paramValues::result, EnumParam(CompareIndexRunsParams.CompareIndexRunsResult::class))
             }) {
          outerCallback.invoke(true) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             CompareIndexRuns(pl).run(paramValues.indexNr1.toLong(), paramValues.indexNr2.toLong(), paramValues.result)
@@ -321,8 +311,8 @@ private fun createParser(toplevel: Boolean,
             Commands.FIND_DUPLICATE_FILES.command,
             ArgParserBuilder(DeleteDuplicateFilesParams()).buildWith {
                add(paramValues::inclFilenameOnCompare, BooleanParam())
-               addNamelessLast(paramValues::referenceDir, FileParam(true), required = true)
-               addNamelessLast(paramValues::toSearchInDirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
+               addNamelessLast(paramValues::referenceDir, MyPathParam(true), required = true)
+               addNamelessLast(paramValues::toSearchInDirs, MyPathListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
          outerCallback.invoke(true) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             FindDuplicateFiles(pl).run(
@@ -336,8 +326,8 @@ private fun createParser(toplevel: Boolean,
             Commands.FIND_FILES_WITH_NO_COPY.command,
             ArgParserBuilder(FindFilesWithNoCopyParams()).buildWith {
                add(paramValues::reverse, BooleanParam())
-               addNamelessLast(paramValues::referenceDir, FileParam(true), required = true)
-               addNamelessLast(paramValues::toSearchInDirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
+               addNamelessLast(paramValues::referenceDir, MyPathParam(true), required = true)
+               addNamelessLast(paramValues::toSearchInDirs, MyPathListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
          outerCallback.invoke(true) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             FindFilesWithNoCopy(pl).run(
@@ -351,8 +341,8 @@ private fun createParser(toplevel: Boolean,
             Commands.CORRECT_DIFF_IN_FILE_MODIFICATION_DATE.command,
             ArgParserBuilder(CorrectDiffInFileModificationDateParams()).buildWith {
                add(paramValues::ignoreMilliseconds, BooleanParam())
-               addNamelessLast(paramValues::referenceDir, FileParam(true), required = true)
-               addNamelessLast(paramValues::toSearchInDirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
+               addNamelessLast(paramValues::referenceDir, MyPathParam(true), required = true)
+               addNamelessLast(paramValues::toSearchInDirs, MyPathListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
          outerCallback.invoke(false) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             CorrectDiffInFileModificationDate(pl).run(
@@ -368,7 +358,7 @@ private fun createParser(toplevel: Boolean,
             ArgParserBuilder(CorrectDiffInFileModificationDateAndExifDateTakenParams()).buildWith {
                add(paramValues::ignoreSecondsDiff, IntParam())
                add(paramValues::ignoreHoursDiff, IntParam())
-               addNamelessLast(paramValues::dirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
+               addNamelessLast(paramValues::dirs, MyPathListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
          outerCallback.invoke(false) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             CorrectDiffInFileModificationDateAndExifDateTaken(pl).run(
@@ -382,7 +372,7 @@ private fun createParser(toplevel: Boolean,
       addActionParser(
             Commands.RENAME_FILES_TO_MODIFICATION_DATE.command,
             ArgParserBuilder(RenameFilesToModificationDateParams()).buildWith {
-               addNamelessLast(paramValues::dirs, FileListParam(1..Int.MAX_VALUE, true), required = true)
+               addNamelessLast(paramValues::dirs, MyPathListParam(1..Int.MAX_VALUE, true), required = true)
             }) {
          outerCallback.invoke(false) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             RenameFilesToModificationDate(pl).run(
@@ -394,7 +384,7 @@ private fun createParser(toplevel: Boolean,
       addActionParser(
             Commands.LIST_INDEX_RUNS.command,
             ArgParserBuilder(ListIndexRunsParams()).buildWith {
-               addNamelessLast(paramValues::dir, FileParam())
+               addNamelessLast(paramValues::dir, MyPathParam())
             }) {
          outerCallback.invoke(false) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             ListIndexRuns(pl).run(paramValues.dir?.canonicalFile)
@@ -405,7 +395,7 @@ private fun createParser(toplevel: Boolean,
       addActionParser(
             Commands.LIST_PATHS.command,
             ArgParserBuilder(ListPathsParams()).buildWith {
-               addNamelessLast(paramValues::dir, FileParam(), required = true)
+               addNamelessLast(paramValues::dir, MyPathParam(), required = true)
             }) {
          outerCallback.invoke(false) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
             ListPaths(pl).run(paramValues.dir!!.canonicalFile)
@@ -529,8 +519,8 @@ private fun createParser(toplevel: Boolean,
       addActionParser(
             Commands.MOVE.command,
             ArgParserBuilder(MoveFilesParams()).buildWith {
-               add(paramValues::basePath, FileParam(), required = true)
-               add(paramValues::toDir, FileParam(), required = true)
+               add(paramValues::basePath, MyPathParam(), required = true)
+               add(paramValues::toDir, MyPathParam(), required = true)
                add(paramValues::deleteEmptyDirs, BooleanParam())
             }) {
          outerCallback.invoke(true) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
@@ -636,6 +626,7 @@ private fun loggerInfo(propertyName: String, propertyValue: Any?) {
       if (value is String) return "\"$value\""
       if (value is Boolean) return BooleanParam().convertToStr(value)
       if (value is File) return FileParam().convertToStr(value)
+      if (value is MyPath) return MyPathParam().convertToStr(value)
       if (value is TimeZone) return TimeZoneParam().convertToStr(value)
       if (value is IntRange) return IntRangeParam().convertToStr(value)
       if (value is IndexFiles.ReadConfig) return ReadConfigParam().convertToStr(value)

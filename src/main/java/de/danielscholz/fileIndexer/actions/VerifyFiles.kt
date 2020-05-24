@@ -3,6 +3,7 @@ package de.danielscholz.fileIndexer.actions
 import de.danielscholz.fileIndexer.Config
 import de.danielscholz.fileIndexer.common.ChecksumCreator
 import de.danielscholz.fileIndexer.common.InputStreamWrapperImpl
+import de.danielscholz.fileIndexer.common.MyPath
 import de.danielscholz.fileIndexer.common.tryWith
 import de.danielscholz.fileIndexer.persistence.FileLocation
 import de.danielscholz.fileIndexer.persistence.PersistenceLayer
@@ -20,8 +21,8 @@ class VerifyFiles(private val pl: PersistenceLayer, private val doPrintln: Boole
 
    private val logger = LoggerFactory.getLogger(this.javaClass)
 
-   fun run(dir: File, excludeIndexRunsWithFailures: Boolean = false, checkIfAllFilesAreInIndex: Boolean = false): Boolean {
-      val source = pl.loadFileLocationsForPath("auto", dir, excludeIndexRunsWithFailures, false)
+   fun run(path: MyPath, excludeIndexRunsWithFailures: Boolean = false, checkIfAllFilesAreInIndex: Boolean = false): Boolean {
+      val source = pl.loadFileLocationsForPath(path, excludeIndexRunsWithFailures, false)
       var diffs = 0
 
       if (checkIfAllFilesAreInIndex) {

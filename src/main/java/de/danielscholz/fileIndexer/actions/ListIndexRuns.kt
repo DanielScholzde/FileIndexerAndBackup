@@ -8,15 +8,14 @@ import de.danielscholz.fileIndexer.persistence.PersistenceLayer
 import de.danielscholz.fileIndexer.persistence.Queries
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.LoggerFactory
-import java.io.File
 import java.util.*
 
 class ListIndexRuns(private val pl: PersistenceLayer) {
 
    private val logger = LoggerFactory.getLogger(this.javaClass)
 
-   fun run(dir: File?) {
-      if (dir == null) {
+   fun run(path: MyPath?) {
+      if (path == null) {
          val list = pl.loadAllIndexRun(IndexRunFailures.INCL_FAILURES)
 
          list.map { format(it) }.transform().forEach {
@@ -26,13 +25,13 @@ class ListIndexRuns(private val pl: PersistenceLayer) {
             logger.info("There are no indexed files")
          }
       } else {
-         val list = pl.getPathList(null, dir.canonicalFile)
+         val list = pl.getPathList(path)
 
          list.map { format(it.indexRun) }.transform().forEach {
             logger.info(it)
          }
          if (list.isEmpty()) {
-            logger.info("The directory $dir has no indexed files")
+            logger.info("The directory $path has no indexed files")
          }
       }
    }

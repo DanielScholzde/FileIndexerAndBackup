@@ -18,72 +18,65 @@ class SyncFiles(private val pl: PersistenceLayer) {
 
    private val logger = LoggerFactory.getLogger(this.javaClass)
 
-   fun run(sourceDir: File,
-           targetDir: File,
+   fun run(sourcePath: MyPath,
+           targetPath: MyPath,
            includedPaths: List<String>,
            mediumDescriptionSource: String?,
            mediumDescriptionTarget: String?,
-           mediumSerialSource: String?,
-           mediumSerialTarget: String?,
            indexArchiveContentsOfSourceDir: Boolean,
            skipIndexFilesOfSourceDir: Boolean,
            sourceReadConfig: IndexFiles.ReadConfig,
            targetReadConfig: IndexFiles.ReadConfig) {
 
       if (skipIndexFilesOfSourceDir) {
-         logger.info("Skip: Create index of source directory $sourceDir")
+         logger.info("Skip: Create index of source directory $sourcePath")
       } else {
-         logger.info("Create index of source directory $sourceDir")
-         IndexFiles(sourceDir,
+         logger.info("Create index of source directory $sourcePath")
+         IndexFiles(sourcePath,
                     includedPaths,
                     null,
                     mediumDescriptionSource,
-                    mediumSerialSource,
                     indexArchiveContentsOfSourceDir,
                     false,
                     sourceReadConfig,
                     pl).run()
       }
 
-      val newestIndexRunSource = pl.getNewestPath(getVolumeSerialNr(sourceDir, mediumSerialSource), sourceDir, true)!!
+      val newestIndexRunSource = pl.getNewestPath(sourcePath, true)!!
       val sourceFiles = LoadFileLocations(newestIndexRunSource, pl).load(false)
 
-      val mediumSerialT = getVolumeSerialNr(targetDir, mediumSerialTarget)
-
       // todo should be possible to deactivate indexing via parameter
-      val indexRunTargetList = pl.findAllIndexRun(mediumSerialT,
-                                                  calcPathWithoutPrefix(targetDir),
-                                                  if (mediumSerialT.isEmpty()) calcFilePathPrefix(targetDir) else null,
+      val indexRunTargetList = pl.findAllIndexRun(targetPath.mediumSerial,
+                                                  targetPath.pathWithoutPrefix,
+                                                  if (targetPath.mediumSerial.isEmpty()) targetPath.prefix else null,
                                                   IndexRunFailures.EXCL_FAILURES)
       // if target is not indexed yet, create an index
       if (indexRunTargetList.isEmpty()) {
-         Files.createDirectories(targetDir.toPath())
+         Files.createDirectories(targetPath.toPath())
          logger.info("Index target directory") // todo excluded FilePath should not be considered here!
-         IndexFiles(targetDir,
+         IndexFiles(targetPath,
                     listOf(),
                     null,
                     mediumDescriptionTarget,
-                    mediumSerialTarget,
                     false,
                     false,
                     targetReadConfig,
                     pl).run()
       } else {
          logger.info("Verify files within target directory")
-         if (!VerifyFiles(pl, false).run(targetDir, true)) {
+         if (!VerifyFiles(pl, false).run(targetPath, true)) {
             logger.warn("Files within target directory have changed! Create new index.")
-            IndexFiles(targetDir,
+            IndexFiles(targetPath,
                        listOf(),
                        null,
                        mediumDescriptionTarget,
-                       mediumSerialTarget,
                        false,
                        false,
                        targetReadConfig,
                        pl).run()
          }
       }
-      val newestIndexRunTarget = pl.getNewestPath(mediumSerialT, targetDir)!!
+      val newestIndexRunTarget = pl.getNewestPath(targetPath)!!
       val targetFiles = LoadFileLocations(newestIndexRunTarget, pl).load(false)
 
       val matchingMode = REL_PATH2 + FILENAME
@@ -152,11 +145,10 @@ class SyncFiles(private val pl: PersistenceLayer) {
       Global.echoAndResetStat()
 
       logger.info("Index target directory")
-      IndexFiles(targetDir,
+      IndexFiles(targetPath,
                  listOf(),
                  null,
                  mediumDescriptionTarget,
-                 mediumSerialTarget,
                  false,
                  false,
                  targetReadConfig,

@@ -1,10 +1,7 @@
 package de.danielscholz.fileIndexer.actions
 
 import de.danielscholz.fileIndexer.Config
-import de.danielscholz.fileIndexer.common.convertToLocalZone
-import de.danielscholz.fileIndexer.common.ignoreMillis
-import de.danielscholz.fileIndexer.common.toStr
-import de.danielscholz.fileIndexer.common.toStrSys
+import de.danielscholz.fileIndexer.common.*
 import de.danielscholz.fileIndexer.matching.filterEmptyFiles
 import de.danielscholz.fileIndexer.persistence.FileLocation
 import de.danielscholz.fileIndexer.persistence.PersistenceLayer
@@ -21,9 +18,9 @@ class RenameFilesToModificationDate(private val pl: PersistenceLayer) {
 
    private val logger = LoggerFactory.getLogger(this.javaClass)
 
-   fun run(dirs: List<File>) {
+   fun run(dirs: List<MyPath>) {
 
-      val filesReference: Sequence<FileLocation> = pl.loadFileLocationsForPaths("auto", dirs, true, false).asSequence().filterEmptyFiles()
+      val filesReference: Sequence<FileLocation> = pl.loadFileLocationsForPaths(dirs, true, false).asSequence().filterEmptyFiles()
 
       val filtered = filesReference.filter {
          val createFilename = createFilename(it)

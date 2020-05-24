@@ -2,6 +2,7 @@ package de.danielscholz.fileIndexer.actions
 
 import de.danielscholz.fileIndexer.Config
 import de.danielscholz.fileIndexer.common.CancelPipelineException
+import de.danielscholz.fileIndexer.common.MyPath
 import de.danielscholz.fileIndexer.common.ensureSuffix
 import de.danielscholz.fileIndexer.persistence.FileLocation
 import de.danielscholz.fileIndexer.persistence.getFullFilePath
@@ -14,11 +15,11 @@ class MoveFiles {
 
    private val logger = LoggerFactory.getLogger(this.javaClass)
 
-   fun run(files: List<FileLocation>, basePath: File, toDir: File, deleteEmptyDirs: Boolean) {
+   fun run(files: List<FileLocation>, basePath: MyPath, toPath: MyPath, deleteEmptyDirs: Boolean) {
       logger.info("Moving files with base path: $basePath")
 
       val basePathStr = basePath.path.replace("\\", "/").ensureSuffix("/")
-      val toDirStr = toDir.path.replace("\\", "/").ensureSuffix("/")
+      val toDirStr = toPath.path.replace("\\", "/").ensureSuffix("/")
 
       val matched = mutableListOf<Pair<File, File>>()
       var failures = 0
@@ -58,7 +59,7 @@ class MoveFiles {
          }
       }
 
-      logger.info("$moved files moved to $toDir")
+      logger.info("$moved files moved to $toPath")
 
       var deletedPaths = 0
       if (!Config.INST.dryRun) {

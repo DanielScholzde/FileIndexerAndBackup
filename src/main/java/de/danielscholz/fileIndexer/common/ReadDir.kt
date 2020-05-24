@@ -150,7 +150,7 @@ private fun isExcludedFile(fileEntry: File, caseSensitive: Boolean, stats: Exclu
 
 private fun isExcludedDir(fileEntry: File, caseSensitive: Boolean, stats: Excluded?): Boolean {
    val path = fileEntry.canonicalPath.replace('\\', '/').ensureSuffix("/")
-   val pathWithoutPrefix = myLazy { calcPathWithoutPrefix(fileEntry.canonicalFile) }
+   val pathWithoutPrefix = myLazy { calcPathWithoutPrefix(fileEntry.canonicalFile.path) }
 
    for (excludedPath in Config.INST.excludedPaths.iterator() + Config.INST.defaultExcludedPaths.iterator()) {
       if (excludedPath.startsWith("//")) {

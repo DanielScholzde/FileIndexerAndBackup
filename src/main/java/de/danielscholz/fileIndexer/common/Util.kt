@@ -62,18 +62,22 @@ fun setRootLoggerLevel() {
 }
 
 /**
- * z.B. C:
+ * e.g. "C:"
+ * if no prefix (drive letter) is available, an empty string is returned
  */
-fun calcFilePathPrefix(dir: File): String {
-   return dir.toPath().root?.toString()?.removeSuffix(File.separator) ?: ""
+fun calcFilePathPrefix(path: String): String {
+   if (path.length >= 2 && path.toLowerCase()[0] in 'a'..'z' && path[1] == ':') {
+      return path.substring(0, 2)
+   }
+   return ""
 }
 
 /**
  * Fängt immer mit einem / an und endet auch damit.
  * z.B. /test/test2/
  */
-fun calcPathWithoutPrefix(dir: File): String {
-   return dir.toString().removePrefix(calcFilePathPrefix(dir)).replace("\\", "/").ensureSuffix("/")
+fun calcPathWithoutPrefix(path: String): String {
+   return path.removePrefix(calcFilePathPrefix(path)).replace("\\", "/").ensureSuffix("/")
 }
 
 fun FileLocation.formatOtherData(): String =
@@ -252,24 +256,13 @@ fun Long.toStr(): String {
 }
 
 // todo Linux?
-fun getVolumeSerialNr(dir: File): String? {
-   val volumeNr = Files.getFileStore(dir.toPath()).getAttribute("volume:vsn")
+fun getVolumeSerialNr(path: String): String? {
+   val volumeNr = Files.getFileStore(File(path).toPath()).getAttribute("volume:vsn")
    if (volumeNr is Int) {
       return Integer.toHexString(volumeNr).toUpperCase()
    }
-   if (volumeNr != null) throw IllegalStateException()
+   if (volumeNr != null) throw IllegalStateException("medium serial no is not a number!")
    return null
-}
-
-fun getVolumeSerialNr(dir: File, mediumSerialParam: String?): String {
-   var mediumSerialDetermined = mediumSerialParam
-   if (mediumSerialDetermined.isNullOrEmpty()) {
-      mediumSerialDetermined = getVolumeSerialNr(dir)
-      if (mediumSerialDetermined.isNullOrEmpty()) {
-         throw Exception("MediumSerial of $dir could not be determined. Please specify parameter --mediumSerial with a value.")
-      }
-   }
-   return mediumSerialDetermined
 }
 
 fun GlobalParams.getCopy(): GlobalParams {

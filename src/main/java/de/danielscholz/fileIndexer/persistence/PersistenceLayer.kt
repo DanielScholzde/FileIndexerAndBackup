@@ -1,7 +1,9 @@
 package de.danielscholz.fileIndexer.persistence
 
 import de.danielscholz.fileIndexer.Config
-import de.danielscholz.fileIndexer.common.*
+import de.danielscholz.fileIndexer.common.MyPath
+import de.danielscholz.fileIndexer.common.ensureSuffix
+import de.danielscholz.fileIndexer.common.formatOtherData
 import de.danielscholz.fileIndexer.matching.MatchMode
 import de.danielscholz.fileIndexer.matching.plus
 import de.danielscholz.fileIndexer.matching.union
@@ -11,7 +13,6 @@ import de.danielscholz.fileIndexer.persistence.common.getIndexRunSqlAttr
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.sql.ResultSet
-import kotlin.collections.listOf
 
 open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
 
@@ -147,34 +148,32 @@ open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
 
    fun clearFilePathCache(filePath: FilePath? = null) = filePathCache.clearFilePathCache(filePath)
 
-   fun getNewestPath(mediumSerial: String?, dir: File, excludeIndexRunsWithFailures: Boolean = false): IndexRunFilePathResult? {
+   fun getNewestPath(path: MyPath, excludeIndexRunsWithFailures: Boolean = false): IndexRunFilePathResult? {
       val failures = if (excludeIndexRunsWithFailures) IndexRunFailures.EXCL_FAILURES else IndexRunFailures.INCL_FAILURES
-      val list = getPathIntern(mediumSerial, dir, true, failures, null)
+      val list = getPathIntern(path, true, failures, null)
       return if (list.isEmpty()) null else list[0]
    }
 
-   fun getPathList(mediumSerial: String?, dir: File, excludeFailures: Boolean = false): List<IndexRunFilePathResult> {
+   fun getPathList(path: MyPath, excludeFailures: Boolean = false): List<IndexRunFilePathResult> {
       val failures = if (excludeFailures) IndexRunFailures.EXCL_FAILURES else IndexRunFailures.INCL_FAILURES
-      return getPathIntern(mediumSerial, dir, false, failures, null)
+      return getPathIntern(path, false, failures, null)
    }
 
-   fun getFailurePathList(mediumSerial: String?, dir: File, fromIndexRunId: Long? = null): List<IndexRunFilePathResult> {
-      return getPathIntern(mediumSerial, dir, false, IndexRunFailures.ONLY_FAILURES, fromIndexRunId)
+   fun getFailurePathList(path: MyPath, fromIndexRunId: Long? = null): List<IndexRunFilePathResult> {
+      return getPathIntern(path, false, IndexRunFailures.ONLY_FAILURES, fromIndexRunId)
    }
 
    /**
     * Searches all indexRuns for a matching indexed path. Returns either all results or only the first one (when singleResult=true).
     */
-   private fun getPathIntern(mediumSerial: String?,
-                             dir: File,
+   private fun getPathIntern(path: MyPath,
                              singleResult: Boolean,
                              failures: IndexRunFailures,
                              fromIndexRunId: Long?): List<IndexRunFilePathResult> {
       val result = mutableListOf<IndexRunFilePathResult>()
-      val serial = if (mediumSerial == "auto") getVolumeSerialNr(dir, null) else mediumSerial
-      val pathPrefix = if (serial == null) calcFilePathPrefix(dir) else null
-      val dirWithoutPrefix = calcPathWithoutPrefix(dir)
-      for (indexRun in findAllIndexRun(serial, dirWithoutPrefix, pathPrefix, failures)) {
+      val pathPrefix = if (path.mediumSerial == null) path.prefix else null
+      val dirWithoutPrefix = path.pathWithoutPrefix
+      for (indexRun in findAllIndexRun(path.mediumSerial, dirWithoutPrefix, pathPrefix, failures)) {
          if (fromIndexRunId != null && indexRun.id < fromIndexRunId) {
             continue
          }
@@ -193,7 +192,7 @@ open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
          }
       }
       if (Config.INST.verbose) {
-         logger.info("Found ${result.size} index runs for path $dir (single result requested: $singleResult)")
+         logger.info("Found ${result.size} index runs for path $path (single result requested: $singleResult)")
       }
       return result
    }
@@ -225,21 +224,19 @@ open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
       return filePathCache.getFilePath(filePathId).path
    }
 
-   fun loadFileLocationsForPath(mediumSerial: String?,
-                                path: File,
+   fun loadFileLocationsForPath(path: MyPath,
                                 excludeIndexRunsWithFailures: Boolean = false,
                                 inclFilesInArchives: Boolean = true): Collection<FileLocation> {
 
-      val indexRunFilePathResult = getNewestPath(mediumSerial, path, excludeIndexRunsWithFailures) ?: return emptyList()
+      val indexRunFilePathResult = getNewestPath(path, excludeIndexRunsWithFailures) ?: return emptyList()
       return LoadFileLocations(indexRunFilePathResult, this).load(inclFilesInArchives)
    }
 
-   fun loadFileLocationsForPaths(mediumSerial: String?,
-                                 dirs: List<File>,
+   fun loadFileLocationsForPaths(paths: List<MyPath>,
                                  excludeIndexRunsWithFailures: Boolean = false,
                                  inclFilesInArchives: Boolean = true): Collection<FileLocation> {
 
-      val indexRunFilePathResults = dirs.mapNotNull { dir -> getNewestPath(mediumSerial, dir, excludeIndexRunsWithFailures) }
+      val indexRunFilePathResults = paths.mapNotNull { dir -> getNewestPath(dir, excludeIndexRunsWithFailures) }
       if (indexRunFilePathResults.isEmpty()) return emptyList()
 
       return indexRunFilePathResults

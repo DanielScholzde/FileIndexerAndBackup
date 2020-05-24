@@ -1,6 +1,7 @@
 package de.danielscholz.fileIndexer.actions
 
 import de.danielscholz.fileIndexer.Config
+import de.danielscholz.fileIndexer.common.MyPath
 import de.danielscholz.fileIndexer.common.convertToLocalZone
 import de.danielscholz.fileIndexer.common.toStr
 import de.danielscholz.fileIndexer.matching.*
@@ -20,11 +21,11 @@ class CorrectDiffInFileModificationDate(private val pl: PersistenceLayer) {
 
    private val logger = LoggerFactory.getLogger(this.javaClass)
 
-   fun run(referenceDir: File, toSearchInDirs: List<File>, ignoreMilliseconds: Boolean) {
+   fun run(referenceDir: MyPath, toSearchInDirs: List<MyPath>, ignoreMilliseconds: Boolean) {
 
-      val filesReference: Sequence<FileLocation> = pl.loadFileLocationsForPath("auto", referenceDir, true, false).asSequence().filterEmptyFiles()
+      val filesReference: Sequence<FileLocation> = pl.loadFileLocationsForPath(referenceDir, true, false).asSequence().filterEmptyFiles()
 
-      val filesToSearchIn: Sequence<FileLocation> = pl.loadFileLocationsForPaths("auto", toSearchInDirs, true, false).asSequence().filterEmptyFiles()
+      val filesToSearchIn: Sequence<FileLocation> = pl.loadFileLocationsForPaths(toSearchInDirs, true, false).asSequence().filterEmptyFiles()
 
       val result = filesReference.intersect(filesToSearchIn, HASH + FILE_SIZE + FILENAME, true)
          .filter(if (ignoreMilliseconds) ResultFilter.MODIFIED_SEC_NEQ else ResultFilter.MODIFIED_MILLIS_NEQ)

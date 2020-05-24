@@ -32,13 +32,11 @@ class BackupFiles(private val pl: PersistenceLayer) {
     * @param targetDir target directory (without date)
     * @param indexArchiveContentsOfSourceDir Should the archives in the source directory be indexed?
     */
-   fun run(sourceDir: File,
-           targetDir: File,
+   fun run(sourceDir: MyPath,
+           targetDir: MyPath,
            includedPaths: List<String>,
            mediumDescriptionSource: String?,
            mediumDescriptionTarget: String?,
-           mediumSerialSource: String?,
-           mediumSerialTarget: String?,
            indexArchiveContentsOfSourceDir: Boolean,
            skipIndexFilesOfSourceDir: Boolean,
            sourceReadConfig: IndexFiles.ReadConfig) {
@@ -53,19 +51,16 @@ class BackupFiles(private val pl: PersistenceLayer) {
                     includedPaths,
                     null,
                     mediumDescriptionSource,
-                    mediumSerialSource,
                     indexArchiveContentsOfSourceDir,
                     false,
                     sourceReadConfig,
                     pl).run()
       }
 
-      val newestIndexRunSource = pl.getNewestPath(getVolumeSerialNr(sourceDir, mediumSerialSource), sourceDir, true)!!
+      val newestIndexRunSource = pl.getNewestPath(sourceDir, true)!!
       val sourceFiles = LoadFileLocations(newestIndexRunSource, pl).load(false)
 
-      val mediumSerialT = getVolumeSerialNr(targetDir, mediumSerialTarget)
-
-      val existingBackupsIndexRun = pl.getPathList(mediumSerialT, targetDir, false)
+      val existingBackupsIndexRun = pl.getPathList(targetDir, false)
 
       var allNotEmptyExistingBackupFiles: Collection<FileLocation> = listOf()
       var newestExistingBackupFiles: Collection<FileLocation> = listOf()
@@ -82,13 +77,13 @@ class BackupFiles(private val pl: PersistenceLayer) {
 
       testIfCancel(pl.db)
 
-      if (!checkModifiedCountAndShowConfirmDialog(sourceFiles, newestExistingBackupFiles, allNotEmptyExistingBackupFiles, targetDir)) return
+      if (!checkModifiedCountAndShowConfirmDialog(sourceFiles, newestExistingBackupFiles, allNotEmptyExistingBackupFiles, targetDir.toFile())) return
 
       val now = Instant.now()
-      val targetSubDir = File("$targetDir/${now.ignoreMillis().convertToLocalZone().toStrFilename()}").canonicalFile
+      val targetSubDir = MyPath("$targetDir/${now.ignoreMillis().convertToLocalZone().toStrFilename()}", targetDir.mediumSerial)
 
       if (!Config.INST.dryRun) {
-         if (targetSubDir.isDirectory) throw Exception("Backup directory $targetSubDir already exists!")
+         if (targetSubDir.toFile().isDirectory) throw Exception("Backup directory $targetSubDir already exists!")
          Files.createDirectories(targetSubDir.toPath())
       }
 
@@ -96,20 +91,19 @@ class BackupFiles(private val pl: PersistenceLayer) {
 
          maxReferenceInode = pl.db.dbQueryUniqueLongNullable(Queries.fileLocation3) ?: 0L
 
-         val pathWithoutPrefix = calcPathWithoutPrefix(targetSubDir)
-         val filePath = pl.getOrInsertFullFilePath(File(pathWithoutPrefix))
+         val filePath = pl.getOrInsertFullFilePath(File(targetSubDir.pathWithoutPrefix))
 
          val indexRunTarget = IndexRun(0,
                                        pl,
                                        filePath.id,
-                                       pathWithoutPrefix,
-                                       calcFilePathPrefix(targetSubDir),
+                                       targetSubDir.pathWithoutPrefix,
+                                       targetSubDir.prefix,
                                        includedPaths.convertToSortedStr(),
                                        newestIndexRunSource.indexRun.excludedPaths,
                                        newestIndexRunSource.indexRun.excludedFiles,
                                        mediumDescriptionTarget,
-                                       mediumSerialT,
-                                       testCaseSensitive(targetDir),
+                                       targetDir.mediumSerial,
+                                       testCaseSensitive(targetDir.toFile()),
                                        now,
                                        false,
                                        true,
@@ -397,7 +391,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
       return true
    }
 
-   private fun testWriteableAndHardlinkSupport(targetDir: File): Boolean {
+   private fun testWriteableAndHardlinkSupport(targetDir: MyPath): Boolean {
       val testFile = File("$targetDir/test_73451974239d43.dat")
       try {
          Files.write(testFile.toPath(), ByteArray(1))

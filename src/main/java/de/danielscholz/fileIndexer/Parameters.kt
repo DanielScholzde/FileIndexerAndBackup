@@ -1,6 +1,7 @@
 package de.danielscholz.fileIndexer
 
 import de.danielscholz.fileIndexer.actions.IndexFiles
+import de.danielscholz.fileIndexer.common.MyPath
 import de.danielscholz.kargparser.Description
 import java.io.File
 
@@ -11,19 +12,16 @@ class GlobalParams {
 
 class IndexFilesParams {
    @Description("Directory to index")
-   var dir: File? = null
+   var dir: MyPath? = null
 
    @Description("Included directories; base path is 'dir'. Separator char is \"/\". Specify only if needed")
    var includedPaths: List<String> = listOf()
 
    @Description("Last indexed directory, leave empty for most use cases!")
-   var lastIndexDir: File? = null
+   var lastIndexDir: MyPath? = null
 
    @Description("Description of the medium, like 'Backup CD 1'")
    var mediumDescription: String? = null
-
-   @Description("Serial number of the medium, will be determined automatically if running under windows")
-   var mediumSerial: String? = null
 
    @Description("Also create an index of archive contents")
    var indexArchiveContents: Boolean = true
@@ -37,10 +35,10 @@ class IndexFilesParams {
 
 class SyncFilesParams {
    @Description("Source directory")
-   var sourceDir: File? = null
+   var sourceDir: MyPath? = null
 
    @Description("Target directory")
-   var targetDir: File? = null
+   var targetDir: MyPath? = null
 
    @Description("Included directories; base path is 'sourceDir'. Separator char is \"/\". Specify only if needed")
    var includedPaths: List<String> = listOf()
@@ -50,12 +48,6 @@ class SyncFilesParams {
 
    @Description("Description of the target medium, like 'Backup HD 1'")
    var mediumDescriptionTarget: String? = null
-
-   @Description("Serial number of the source medium, will be determined automatically if running under windows")
-   var mediumSerialSource: String? = null
-
-   @Description("Serial number of the target medium, will be determined automatically if running under windows")
-   var mediumSerialTarget: String? = null
 
    @Description("Also create an index of archive contents")
    var indexArchiveContentsOfSourceDir = false
@@ -72,10 +64,10 @@ class SyncFilesParams {
 
 class BackupFilesParams {
    @Description("Source directory")
-   var sourceDir: File? = null
+   var sourceDir: MyPath? = null
 
    @Description("Target directory")
-   var targetDir: File? = null
+   var targetDir: MyPath? = null
 
    @Description("Included directories; base path is 'sourceDir'. Separator char is \"/\". Specify only if needed")
    var includedPaths: List<String> = listOf()
@@ -85,12 +77,6 @@ class BackupFilesParams {
 
    @Description("Description of the target medium, like 'Backup HD 1'")
    var mediumDescriptionTarget: String? = null
-
-   @Description("Serial number of the source medium, will be determined automatically if running under windows")
-   var mediumSerialSource: String? = null
-
-   @Description("Serial number of the target medium, will be determined automatically if running under windows")
-   var mediumSerialTarget: String? = null
 
    @Description("Also create an index of archive contents")
    var indexArchiveContentsOfSourceDir = false
@@ -104,19 +90,19 @@ class BackupFilesParams {
 
 class DeleteDuplicateFilesParams {
    @Description("Reference Directory")
-   var referenceDir: File? = null
+   var referenceDir: MyPath? = null
 
    @Description("Directories to search for duplicates")
-   var toSearchInDirs: List<File> = listOf()
+   var toSearchInDirs: List<MyPath> = listOf()
    var inclFilenameOnCompare: Boolean = false
 }
 
 class FindFilesWithNoCopyParams {
    @Description("Reference directory")
-   var referenceDir: File? = null
+   var referenceDir: MyPath? = null
 
    @Description("Directories to search in")
-   var toSearchInDirs: List<File> = listOf()
+   var toSearchInDirs: List<MyPath> = listOf()
 
    @Description("Reverse the meaning of referenceDir and toSearchInDirs")
    var reverse: Boolean = false
@@ -124,10 +110,10 @@ class FindFilesWithNoCopyParams {
 
 class CorrectDiffInFileModificationDateParams {
    @Description("Reference directory")
-   var referenceDir: File? = null
+   var referenceDir: MyPath? = null
 
    @Description("Directories to search in")
-   var toSearchInDirs: List<File> = listOf()
+   var toSearchInDirs: List<MyPath> = listOf()
 
    @Description("Ignore milliseconds when comparing modification dates")
    var ignoreMilliseconds: Boolean = false
@@ -135,7 +121,7 @@ class CorrectDiffInFileModificationDateParams {
 
 class CorrectDiffInFileModificationDateAndExifDateTakenParams {
    @Description("Directories")
-   var dirs: List<File> = listOf()
+   var dirs: List<MyPath> = listOf()
 
    @Description("Ignore this maximum difference in seconds when comparing dates")
    var ignoreSecondsDiff: Int = 0
@@ -146,22 +132,22 @@ class CorrectDiffInFileModificationDateAndExifDateTakenParams {
 
 class RenameFilesToModificationDateParams {
    @Description("Directories")
-   var dirs: List<File> = listOf()
+   var dirs: List<MyPath> = listOf()
 }
 
 class ListIndexRunsParams {
    @Description("Directory")
-   var dir: File? = null
+   var dir: MyPath? = null
 }
 
 class ListPathsParams {
    @Description("Directory")
-   var dir: File? = null
+   var dir: MyPath? = null
 }
 
 class VerifyFilesParams {
    @Description("Directory")
-   var dir: File? = null
+   var dir: MyPath? = null
 }
 
 class RemoveIndexRunParams {
@@ -205,8 +191,8 @@ class DeleteFilesParams {
 }
 
 class MoveFilesParams {
-   var basePath: File? = null
-   var toDir: File? = null
+   var basePath: MyPath? = null
+   var toDir: MyPath? = null
    var deleteEmptyDirs: Boolean = true
 }
 

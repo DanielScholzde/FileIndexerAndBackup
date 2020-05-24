@@ -20,7 +20,6 @@ import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
-import java.lang.IllegalStateException
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.attribute.BasicFileAttributes
@@ -28,14 +27,13 @@ import java.time.Instant
 import kotlin.math.absoluteValue
 
 /**
- * Indexes all files within the directory dir.
+ * Indexes all files within the directory path.
  * Files in archives are indexed if indexArchiveContents is true.
  */
-class IndexFiles(private val dir: File,
+class IndexFiles(private val path: MyPath,
                  private val includedPaths: List<String>,
-                 private val lastIndexDir: File?,
+                 private val lastIndexPath: MyPath?,
                  private val mediumDescription: String?,
-                 private val mediumSerial: String?,
                  private val indexArchiveContents: Boolean,
                  private val updateHardlinksInLastIndex: Boolean,
                  private val readConfig: ReadConfig,
@@ -69,34 +67,31 @@ class IndexFiles(private val dir: File,
 
    fun run(): Pair<IndexRun, Int> {
       // reads the number of files, size of all files within the directory and determines excludedFilesUsed / excludedPathsUsed
-      val dirInfos = readAllDirInfos(dir, indexArchiveContents, includedPaths)
+      val dirInfos = readAllDirInfos(path.toFile(), indexArchiveContents, includedPaths)
       stat.filesSizeAll = dirInfos.size
       stat.filesCountAll = dirInfos.files
       caseSensitiveFS = dirInfos.caseSensitive
 
-      val mediumSerialDetermined = getVolumeSerialNr(dir, mediumSerial)
-
       // load already indexed files into lastIndexedFileLocationsByKey
-      loadAlreadyIndexedFiles(lastIndexDir ?: dir, dirInfos.excluded, mediumSerialDetermined)
+      loadAlreadyIndexedFiles(lastIndexPath ?: path, dirInfos.excluded)
 
       maxReferenceInode = pl.db.dbQueryUniqueLongNullable(Queries.fileLocation3) ?: 0L
 
       transaction(logger, pl.db) {
-         val pathWithoutPrefix = calcPathWithoutPrefix(dir)
-         val filePath = pl.getOrInsertFullFilePath(File(pathWithoutPrefix))
-         val fileStore = Files.getFileStore(dir.toPath())
+         val filePath = pl.getOrInsertFullFilePath(File(path.pathWithoutPrefix))
+         val fileStore = Files.getFileStore(path.toPath())
 
          indexRun = pl.insertIntoIndexRun(
                IndexRun(0,
                         pl,
                         filePath.id,
-                        pathWithoutPrefix,
-                        calcFilePathPrefix(dir),
+                        path.pathWithoutPrefix,
+                        path.prefix,
                         includedPaths.convertToSortedStr(),
                         dirInfos.excluded.excludedPathsUsed.convertToSortedStr(),
                         dirInfos.excluded.excludedFilesUsed.convertToSortedStr(),
                         mediumDescription,
-                        mediumSerialDetermined,
+                        path.mediumSerial,
                         dirInfos.caseSensitive,
                         Instant.now(),
                         false,
@@ -114,7 +109,7 @@ class IndexFiles(private val dir: File,
                stat.startRefresh()
             }
 
-            createIndex(dir, null, includedPaths.map { Path(it, it) })
+            createIndex(path.toFile(), null, includedPaths.map { Path(it, it) })
 
             indexRun!!.failureOccurred = false
             pl.updateIndexRun(indexRun!!)
@@ -133,16 +128,16 @@ class IndexFiles(private val dir: File,
    }
 
    // todo consider param excluded
-   private fun loadAlreadyIndexedFiles(dir: File, excluded: Excluded, mediumSerial: String?) {
+   private fun loadAlreadyIndexedFiles(dir: MyPath, excluded: Excluded) {
       val pathsToLoad = mutableListOf<IndexRunFilePathResult>()
       // load all indexed files from newest successful created indexRun layer
-      val newestPath = pl.getNewestPath(mediumSerial, dir, true)
+      val newestPath = pl.getNewestPath(dir, true)
       if (newestPath != null) {
          pathsToLoad.add(newestPath)
       }
       // if there are newer indexRun layer with a failure, load them too
       // if newestPath is null, all indexRun layer with failures are loaded
-      val failurePathList = pl.getFailurePathList(mediumSerial, dir, newestPath?.indexRun?.id) // ordered by: newest first
+      val failurePathList = pl.getFailurePathList(dir, newestPath?.indexRun?.id) // ordered by: newest first
       pathsToLoad.addAll(failurePathList.reversed())
 
       // load the successfully created indexRun, then load any newer indexRun layer with failures which might overwrite parts of already loaded file information

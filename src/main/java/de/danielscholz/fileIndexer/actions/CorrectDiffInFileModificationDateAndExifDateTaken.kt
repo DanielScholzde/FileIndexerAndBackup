@@ -1,10 +1,7 @@
 package de.danielscholz.fileIndexer.actions
 
 import de.danielscholz.fileIndexer.Config
-import de.danielscholz.fileIndexer.common.convertToLocalZone
-import de.danielscholz.fileIndexer.common.convertToUtcZone
-import de.danielscholz.fileIndexer.common.ignoreMillis
-import de.danielscholz.fileIndexer.common.toStr
+import de.danielscholz.fileIndexer.common.*
 import de.danielscholz.fileIndexer.matching.filterEmptyFiles
 import de.danielscholz.fileIndexer.persistence.FileLocation
 import de.danielscholz.fileIndexer.persistence.PersistenceLayer
@@ -21,7 +18,7 @@ class CorrectDiffInFileModificationDateAndExifDateTaken(private val pl: Persiste
 
    private val logger = LoggerFactory.getLogger(this.javaClass)
 
-   fun run(referenceDir: List<File>, ignoreSecondsDiff: Int, ignoreHoursDiff: Int) {
+   fun run(referenceDir: List<MyPath>, ignoreSecondsDiff: Int, ignoreHoursDiff: Int) {
 
       fun checkModifiedIsDifferent(it: FileLocation): Boolean {
          val imgExifOriginalDate = it.fileContent?.fileMeta?.imgExifOriginalDate ?: return false
@@ -39,7 +36,7 @@ class CorrectDiffInFileModificationDateAndExifDateTaken(private val pl: Persiste
          return dateTime1 != dateTime2
       }
 
-      val filesReference: Sequence<FileLocation> = pl.loadFileLocationsForPaths("auto", referenceDir, true, false).asSequence().filterEmptyFiles()
+      val filesReference: Sequence<FileLocation> = pl.loadFileLocationsForPaths(referenceDir, true, false).asSequence().filterEmptyFiles()
 
       val filtered = filesReference.filter { checkModifiedIsDifferent(it) }
 
