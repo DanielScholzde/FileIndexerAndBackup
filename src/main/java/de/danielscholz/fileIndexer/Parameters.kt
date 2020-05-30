@@ -138,6 +138,7 @@ class RenameFilesToModificationDateParams {
 class ListIndexRunsParams {
    @Description("Directory")
    var dir: MyPath? = null
+   var details: Boolean = false
 }
 
 class ListPathsParams {

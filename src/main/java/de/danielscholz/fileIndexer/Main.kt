@@ -384,10 +384,11 @@ private fun createParser(toplevel: Boolean,
       addActionParser(
             Commands.LIST_INDEX_RUNS.command,
             ArgParserBuilder(ListIndexRunsParams()).buildWith {
+               add(paramValues::details, BooleanParam())
                addNamelessLast(paramValues::dir, MyPathParam())
             }) {
          outerCallback.invoke(false) { pl: PersistenceLayer, pipelineResult: List<FileLocation>?, provideResult: Boolean ->
-            ListIndexRuns(pl).run(paramValues.dir?.canonicalFile)
+            ListIndexRuns(pl).run(paramValues.dir?.canonicalFile, paramValues.details)
             null
          }
       }

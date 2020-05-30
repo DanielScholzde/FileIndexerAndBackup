@@ -143,7 +143,7 @@ class IndexFiles(private val path: MyPath,
       // load the successfully created indexRun, then load any newer indexRun layer with failures which might overwrite parts of already loaded file information
       val fileLocationMap = mutableMapOf<FLKey, FileLocation>()
       for (pathResult in pathsToLoad) {
-         val fileLocationList = LoadFileLocations(pathResult, pl).load(true)
+         val fileLocationList = LoadFileLocations(pl).load(pathResult, true)
          for (fileLocation in fileLocationList) {
             fileLocationMap[FLKey(fileLocation.filePathId, fileLocation.filename)] = fileLocation
          }

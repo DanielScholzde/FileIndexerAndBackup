@@ -43,7 +43,7 @@ class SyncFiles(private val pl: PersistenceLayer) {
       }
 
       val newestIndexRunSource = pl.getNewestPath(sourcePath, true)!!
-      val sourceFiles = LoadFileLocations(newestIndexRunSource, pl).load(false)
+      val sourceFiles = LoadFileLocations(pl).load(newestIndexRunSource, false)
 
       // todo should be possible to deactivate indexing via parameter
       val indexRunTargetList = pl.findAllIndexRun(targetPath.mediumSerial,
@@ -77,7 +77,7 @@ class SyncFiles(private val pl: PersistenceLayer) {
          }
       }
       val newestIndexRunTarget = pl.getNewestPath(targetPath)!!
-      val targetFiles = LoadFileLocations(newestIndexRunTarget, pl).load(false)
+      val targetFiles = LoadFileLocations(pl).load(newestIndexRunTarget, false)
 
       val matchingMode = REL_PATH2 + FILENAME
       var newFiles = sourceFiles.subtract(targetFiles, matchingMode, false)

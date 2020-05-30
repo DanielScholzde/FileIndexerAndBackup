@@ -65,9 +65,9 @@ class FindDuplicateFiles(private val pl: PersistenceLayer) {
       }
       logger.info("")
 
-      val referenceFiles = LoadFileLocations(referencePath, pl).load().filterEmptyFiles()
+      val referenceFiles = LoadFileLocations(pl).load(referencePath).filterEmptyFiles()
       for (i in 0..toSearchInPaths.lastIndex) {
-         for (findResult2 in intersect.apply(referenceFiles, LoadFileLocations(toSearchInPaths[i], pl).load().filterEmptyFiles()).filter(resultFilter)) {
+         for (findResult2 in intersect.apply(referenceFiles, LoadFileLocations(pl).load(toSearchInPaths[i]).filterEmptyFiles()).filter(resultFilter)) {
             val fileLocReference = findResult2.first
             val fileLocToSearchIn = findResult2.second
             val key = createKey(fileLocReference, intersect.mode)

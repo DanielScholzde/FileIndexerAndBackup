@@ -58,7 +58,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
       }
 
       val newestIndexRunSource = pl.getNewestPath(sourceDir, true)!!
-      val sourceFiles = LoadFileLocations(newestIndexRunSource, pl).load(false)
+      val sourceFiles = LoadFileLocations(pl).load(newestIndexRunSource, false)
 
       val existingBackupsIndexRun = pl.getPathList(targetDir, false)
 
@@ -66,7 +66,7 @@ class BackupFiles(private val pl: PersistenceLayer) {
       var newestExistingBackupFiles: Collection<FileLocation> = listOf()
 
       existingBackupsIndexRun.forEach {
-         val files = LoadFileLocations(it, pl).load(false)
+         val files = LoadFileLocations(pl).load(it, false)
 
          if (newestExistingBackupFiles.isEmpty() && !it.indexRun.failureOccurred) {
             newestExistingBackupFiles = files

@@ -12,9 +12,9 @@ class ListPaths(private val pl: PersistenceLayer) {
    fun run(path: MyPath) {
       val indexRunFilePathResult = pl.getNewestPath(path)
       if (indexRunFilePathResult != null) {
-         ListIndexRuns(pl).format(indexRunFilePathResult.indexRun)
+         ListIndexRuns(pl).format(indexRunFilePathResult.indexRun, null)
          logger.info("")
-         val filePathsIds = LoadFileLocations(indexRunFilePathResult, pl).load(false).map { it.filePathId }.toHashSet()
+         val filePathsIds = LoadFileLocations(pl).load(indexRunFilePathResult, false).map { it.filePathId }.toHashSet()
          filePathsIds
             .map { id -> pl.getFullRelPath(id) }
             .sorted()

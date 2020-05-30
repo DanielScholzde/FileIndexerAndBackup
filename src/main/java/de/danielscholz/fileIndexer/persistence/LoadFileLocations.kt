@@ -17,7 +17,7 @@ import kotlin.reflect.KProperty1
  * FileLocations werden über die furtherConditions gesteuert.
  * Es werden auch die Objekte indexRun und fileContent gefüllt!
  */
-class LoadFileLocations(private val toProcess: IndexRunFilePathResult, private val pl: PersistenceLayer) {
+class LoadFileLocations(private val pl: PersistenceLayer) {
 
    private val logger = LoggerFactory.getLogger(this.javaClass)
 
@@ -33,18 +33,25 @@ class LoadFileLocations(private val toProcess: IndexRunFilePathResult, private v
 
    data class Condition<T>(val attribute: KProperty1<T, *>, val operator: Operator, val value: Any)
 
-   fun load(inclFilesInArchives: Boolean = true,
+   fun load(toProcess: IndexRunFilePathResult,
+            inclFilesInArchives: Boolean = true,
             furtherConditions: List<Condition<FileLocation>> = listOf()): Collection<FileLocation> {
       return load(toProcess.indexRun, toProcess.filePath, inclFilesInArchives, furtherConditions)
    }
 
+   fun load(indexRun: IndexRun,
+            inclFilesInArchives: Boolean = true,
+            furtherConditions: List<Condition<FileLocation>> = listOf()): Collection<FileLocation> {
+      return load(indexRun, null, inclFilesInArchives, furtherConditions)
+   }
+
    private fun load(indexRun: IndexRun,
-                    filePath: FilePath,
+                    filePath: FilePath?,
                     inclFilesInArchives: Boolean,
                     furtherConditions: List<Condition<FileLocation>>): Collection<FileLocation> {
 
       fun getFurtherConditions(): String {
-         val inArchive = if (!inclFilesInArchives) " l.inArchive = ? AND\n" else ""
+         val inArchive = if (!inclFilesInArchives) " l.inArchive = 0 AND\n" else ""
          if (furtherConditions.isEmpty()) return inArchive
          return furtherConditions.joinToString(" AND ", postfix = " AND ") { condition ->
             if (condition.operator == Operator.IN && condition.value is Collection<*>) {
@@ -59,10 +66,10 @@ class LoadFileLocations(private val toProcess: IndexRunFilePathResult, private v
          } + inArchive
       }
 
-      logger.debug("Load indexed Files from ${pl.getFullPath(indexRun, filePath.id)} " +
-                   "and Date ${indexRun.runDate.convertToLocalZone().toStr()} " +
-                   "and excluded Paths ${indexRun.excludedPaths.split('|').filter { !Config.INST.defaultExcludedPaths.contains(it) }.joinToString { "\"$it\"" }} " +
-                   "and Files ${indexRun.excludedFiles.split('|').filter { !Config.INST.defaultExcludedFiles.contains(it) }.joinToString { "\"$it\"" }}")
+      logger.debug("Load indexed files from ${pl.getFullPath(indexRun, filePath?.id)} " +
+                   "and date ${indexRun.runDate.convertToLocalZone().toStr()} " +
+                   "and excluded paths ${indexRun.excludedPaths.split('|').filter { !Config.INST.defaultExcludedPaths.contains(it) }.joinToString { "\"$it\"" }} " +
+                   "and files ${indexRun.excludedFiles.split('|').filter { !Config.INST.defaultExcludedFiles.contains(it) }.joinToString { "\"$it\"" }}")
 
       val sql = """
 			SELECT
@@ -75,12 +82,10 @@ class LoadFileLocations(private val toProcess: IndexRunFilePathResult, private v
          JOIN FilePath p ON (p.id = l.filePath_id)
 			WHERE
 			  ${getFurtherConditions()}
-			  l.indexRun_id = ? AND
-			  instr(p.path, ?) = 1 """
+			  l.indexRun_id = ?
+			  ${if (filePath != null) "AND instr(p.path, ?) = 1" else ""} """
 
       val params = mutableListOf<Any>()
-
-      if (!inclFilesInArchives) params.add(0)
 
       for (cond in furtherConditions.map { it.value }) {
          if (cond is Collection<*>) {
@@ -89,7 +94,7 @@ class LoadFileLocations(private val toProcess: IndexRunFilePathResult, private v
             params.add(cond)
       }
       params.add(indexRun.id)
-      params.add(filePath.path)
+      if (filePath != null) params.add(filePath.path)
 
       val result = pl.db.dbQuery(sql, params) {
          val fileLocation = pl.extractFileLocation(it, "l")!!

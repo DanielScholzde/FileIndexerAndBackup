@@ -15,12 +15,10 @@ class CompareIndexRuns(private val pl: PersistenceLayer) {
 
    fun run(indexRunId1: Long, indexRunId2: Long, result: CompareIndexRunsParams.CompareIndexRunsResult?): List<FileLocation>? {
       val indexRun1 = pl.getIndexRun(indexRunId1)!!
-      val files1 = LoadFileLocations(IndexRunFilePathResult(indexRun1, pl.getFilePath(Queries.filePathRootId)), pl)
-         .load(false).asSequence()
+      val files1 = LoadFileLocations(pl).load(IndexRunFilePathResult(indexRun1, pl.getFilePath(Queries.filePathRootId), pl), false).asSequence()
 
       val indexRun2 = pl.getIndexRun(indexRunId2)!!
-      val files2 = LoadFileLocations(IndexRunFilePathResult(indexRun2, pl.getFilePath(Queries.filePathRootId)), pl)
-         .load(false).asSequence()
+      val files2 = LoadFileLocations(pl).load(IndexRunFilePathResult(indexRun2, pl.getFilePath(Queries.filePathRootId), pl), false).asSequence()
 
       val diff1 = files1.subtract(files2, REL_PATH2 + FILENAME + HASH + FILE_SIZE, false).toList()
       val diff2 = files2.subtract(files1, REL_PATH2 + FILENAME + HASH + FILE_SIZE, false).toList()

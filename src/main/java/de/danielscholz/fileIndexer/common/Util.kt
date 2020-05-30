@@ -10,6 +10,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.nio.file.Files
+import java.text.DecimalFormat
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
@@ -231,20 +232,29 @@ operator fun <T> List<T>.plus(elements: List<T>): List<T> {
 fun <T> myLazy(initializer: () -> T): Lazy<T> = lazy(LazyThreadSafetyMode.NONE, initializer)
 
 fun Long.formatAsFileSize(): String {
-   val size = this
-   val gb = size * 100 / (1024 * 1024 * 1024)
-   if (gb >= 10) {
-      return "" + (gb / 100.0) + " GB"
+   val formatter = DecimalFormat("#,##0.00")
+   val size = this.toDouble()
+   val mb = size / (1024 * 1024)
+   if (mb >= 1000) {
+      val gb = size / (1024 * 1024 * 1024)
+      return "" + formatter.format(gb) + " GB"
    }
-   val mb = size * 10 / (1024 * 1024)
-   if (mb >= 10) {
-      return "" + (mb / 10.0) + " MB"
+   val kb = size / 1024
+   if (kb >= 1000) {
+      return "" + formatter.format(mb) + " MB"
    }
-   val kb = size * 10 / 1024
-   if (kb >= 10) {
-      return "" + (kb / 10.0) + " KB"
+   if (size >= 1000) {
+      return "" + formatter.format(kb) + " KB"
    }
-   return "$size Byte"
+   return "$size B"
+}
+
+fun Int.toStr(): String {
+   val toString = this.toString()
+   if (toString.length > 3) {
+      return toString.insert(toString.length - 3, ".")
+   }
+   return toString
 }
 
 fun Long.toStr(): String {

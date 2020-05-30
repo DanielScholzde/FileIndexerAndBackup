@@ -181,11 +181,11 @@ open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
          val filePath = getFilePath(File(relPath))
          if (filePath != null) {
             if (filePath.id == Queries.filePathRootId) {
-               result.add(IndexRunFilePathResult(indexRun, filePath))
+               result.add(IndexRunFilePathResult(indexRun, filePath, this))
                if (singleResult) break
             } else {
                if (hasIndexRunFilePath(indexRun, filePath)) {
-                  result.add(IndexRunFilePathResult(indexRun, filePath))
+                  result.add(IndexRunFilePathResult(indexRun, filePath, this))
                   if (singleResult) break
                }
             }
@@ -198,9 +198,9 @@ open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
    }
 
    /** returns the complete path with prefix */
-   fun getFullPath(indexRun: IndexRun, filePathId: Long): String {
-      val relPath = getFullRelPath(filePathId)
-      return indexRun.pathPrefix + indexRun.path + relPath.removePrefix("/")
+   fun getFullPath(indexRun: IndexRun, filePathId: Long?): String {
+      val relPath = if (filePathId != null) getFullRelPath(filePathId) else null
+      return indexRun.pathPrefix + indexRun.path + (relPath?.removePrefix("/") ?: "")
    }
 
    /** returns the complete path without prefix */
@@ -214,11 +214,6 @@ open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
       return getFullPath(indexRun, fileLocation.filePathId) + fileLocation.filename
    }
 
-   /** returns the complete path with filename but without prefix */
-   fun getFullFilePathExclPrefix(indexRun: IndexRun, fileLocation: FileLocation): String {
-      return getFullPathExclPrefix(indexRun, fileLocation.filePathId) + fileLocation.filename
-   }
-
    /** returns the relative path beginning from indexRun root directory. Path begins and ends always with a / */
    fun getFullRelPath(filePathId: Long): String {
       return filePathCache.getFilePath(filePathId).path
@@ -229,7 +224,7 @@ open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
                                 inclFilesInArchives: Boolean = true): Collection<FileLocation> {
 
       val indexRunFilePathResult = getNewestPath(path, excludeIndexRunsWithFailures) ?: return emptyList()
-      return LoadFileLocations(indexRunFilePathResult, this).load(inclFilesInArchives)
+      return LoadFileLocations(this).load(indexRunFilePathResult, inclFilesInArchives)
    }
 
    fun loadFileLocationsForPaths(paths: List<MyPath>,
@@ -240,7 +235,7 @@ open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
       if (indexRunFilePathResults.isEmpty()) return emptyList()
 
       return indexRunFilePathResults
-         .map { indexRunFilePathResult -> LoadFileLocations(indexRunFilePathResult, this).load(inclFilesInArchives) }
+         .map { indexRunFilePathResult -> LoadFileLocations(this).load(indexRunFilePathResult, inclFilesInArchives) }
          // todo empty result can not be reduced!
          .reduce { fileLocations1, fileLocations2 ->
             fileLocations1.union(fileLocations2,
@@ -259,11 +254,6 @@ fun FileLocation.getFullFilePathForTarget(targetIndexRun: IndexRun): String {
    return this.pl.getFullFilePath(targetIndexRun, this)
 }
 
-/** returns the complete path with filename but without prefix */
-fun FileLocation.getFullFilePathExclPrefix(): String {
-   return this.pl.getFullFilePathExclPrefix(this.indexRun!!, this)
-}
-
 /** returns the complete path with prefix */
 fun FileLocation.getFullPath(): String {
    return this.pl.getFullPath(this.indexRun!!, this.filePathId)
@@ -279,8 +269,24 @@ fun FileLocation.getMediumDescrFullFilePathAndOtherData(): String {
    return mediumDescr1 + this.getFullFilePath() + this.formatOtherData()
 }
 
+fun IndexRun.loadFileLocations(inclFilesInArchives: Boolean = true): Collection<FileLocation> {
+   return LoadFileLocations(this.pl).load(this, inclFilesInArchives)
+}
+
+fun IndexRun.loadFileContents(inclFilesInArchives: Boolean = true): Collection<FileContent> {
+   return LoadFileContents(this.pl).load(this, inclFilesInArchives)
+}
+
+fun IndexRunFilePathResult.loadFileLocations(inclFilesInArchives: Boolean = true): Collection<FileLocation> {
+   return LoadFileLocations(this.pl).load(this, inclFilesInArchives)
+}
+
+fun IndexRunFilePathResult.loadFileContents(inclFilesInArchives: Boolean = true): Collection<FileContent> {
+   return LoadFileContents(this.pl).load(this, inclFilesInArchives)
+}
+
 enum class IndexRunFailures {
    INCL_FAILURES, EXCL_FAILURES, ONLY_FAILURES
 }
 
-data class IndexRunFilePathResult(val indexRun: IndexRun, val filePath: FilePath)
+data class IndexRunFilePathResult(val indexRun: IndexRun, val filePath: FilePath, val pl: PersistenceLayer)
