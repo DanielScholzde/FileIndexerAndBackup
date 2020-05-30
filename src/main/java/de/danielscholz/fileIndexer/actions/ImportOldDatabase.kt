@@ -50,14 +50,14 @@ class ImportOldDatabase(val pl: PersistenceLayer, val oldDbFile: File, val mediu
                           var backupPath: OldBackupPath? = null) : EntityBase
 
 
-   class OldPersistenceLayer(db: Database) : PersistenceLayer(db) {
+   class OldPersistenceLayer(val db: Database, val pl: PersistenceLayer) {
 
       fun getAllBackupRuns(): List<OldBackupRun> {
          return db.dbQuery(
                "SELECT ${getSqlAttributes(OldBackupRun::class, "r")}" +
                " FROM BackupRun r " +
                " ORDER BY r.backupDate ASC ") { // oldest first
-            extractToEntity(OldBackupRun::class, it, "r")!!
+            pl.extractToEntity(OldBackupRun::class, it, "r")!!
          }
       }
 
@@ -70,9 +70,9 @@ class ImportOldDatabase(val pl: PersistenceLayer, val oldDbFile: File, val mediu
                            "     join BackupPath p on (l.backupPath_id = p.id) " +
                            "WHERE l.backupRun_id = ? " +
                            "ORDER BY p.path, l.filename ", listOf(backupRunId)) {
-            val location = extractToEntity(OldLocation::class, it, "l")!!
-            location.backupPath = extractToEntity(OldBackupPath::class, it, "p")!!
-            location.fileContent = extractToEntity(OldFileContent::class, it, "c")!!
+            val location = pl.extractToEntity(OldLocation::class, it, "l")!!
+            location.backupPath = pl.extractToEntity(OldBackupPath::class, it, "p")!!
+            location.fileContent = pl.extractToEntity(OldFileContent::class, it, "c")!!
             location
          }
       }
@@ -90,7 +90,8 @@ class ImportOldDatabase(val pl: PersistenceLayer, val oldDbFile: File, val mediu
 
       Database(oldDbFile.toString()).tryWith { oldDb ->
 
-         val oldPl = OldPersistenceLayer(oldDb)
+         val oldPl = OldPersistenceLayer(oldDb, PersistenceLayer(oldDb))
+
          if (oldPl.db.dbQueryUniqueStr("PRAGMA integrity_check").toLowerCase() != "ok") {
             logger.error("ERROR: Datenbank ist nicht konsistent! Beende Programm.")
             throw Exception("Datenbank ist nicht konsistent! Beende Programm.")

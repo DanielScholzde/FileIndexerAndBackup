@@ -9,41 +9,49 @@ import de.danielscholz.fileIndexer.matching.plus
 import de.danielscholz.fileIndexer.matching.union
 import de.danielscholz.fileIndexer.persistence.Queries.indexRun2
 import de.danielscholz.fileIndexer.persistence.common.Database
+import de.danielscholz.fileIndexer.persistence.common.EntityBase
 import de.danielscholz.fileIndexer.persistence.common.getIndexRunSqlAttr
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.sql.ResultSet
+import kotlin.reflect.KClass
 
-open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
+class PersistenceLayer(val db: Database) {
 
    private val logger = LoggerFactory.getLogger(this.javaClass)
 
    private val filePathCache = FilePathCache(this)
 
+   private val base = PersistenceLayerBase(db)
+
+   fun <T : EntityBase> extractToEntity(clazz: KClass<T>, result: ResultSet, prefix: String = ""): T? = base.extractToEntity(clazz, result, prefix, this)
+
+   fun cleanupEntityCache() = base.cleanupEntityCache()
+
    // may only be called from FilePathCache!!
-   fun insertIntoFilePath(filePath: FilePath) = insert(filePath, FilePath::class, ::validate)
+   fun insertIntoFilePath(filePath: FilePath) = base.insert(filePath, FilePath::class, ::validate)
 
-   fun insertIntoFileLocation(fileLocation: FileLocation) = insert(fileLocation, FileLocation::class, ::validate)
+   fun insertIntoFileLocation(fileLocation: FileLocation) = base.insert(fileLocation, FileLocation::class, ::validate)
 
-   fun insertIntoFileContent(fileContent: FileContent) = insert(fileContent, FileContent::class, ::validate)
+   fun insertIntoFileContent(fileContent: FileContent) = base.insert(fileContent, FileContent::class, ::validate)
 
-   fun insertIntoFileMeta(fileMeta: FileMeta) = insert(fileMeta, FileMeta::class, ::validate)
+   fun insertIntoFileMeta(fileMeta: FileMeta) = base.insert(fileMeta, FileMeta::class, ::validate)
 
-   fun insertIntoIndexRun(indexRun: IndexRun) = insert(indexRun, IndexRun::class, ::validate)
+   fun insertIntoIndexRun(indexRun: IndexRun) = base.insert(indexRun, IndexRun::class, ::validate)
 
-   fun updateFileLocation(fileLocation: FileLocation) = update(fileLocation, FileLocation::class, ::validate)
+   fun updateFileLocation(fileLocation: FileLocation) = base.update(fileLocation, FileLocation::class, ::validate)
 
-   fun updateIndexRun(indexRun: IndexRun) = update(indexRun, IndexRun::class, ::validate)
+   fun updateIndexRun(indexRun: IndexRun) = base.update(indexRun, IndexRun::class, ::validate)
 
-   fun extractIndexRun(result: ResultSet, prefix: String = "") = extractToEntity(IndexRun::class, result, prefix)
+   fun extractIndexRun(result: ResultSet, prefix: String = "") = base.extractToEntity(IndexRun::class, result, prefix, this)
 
-   fun extractFilePath(result: ResultSet, prefix: String = "") = extractToEntity(FilePath::class, result, prefix)
+   fun extractFilePath(result: ResultSet, prefix: String = "") = base.extractToEntity(FilePath::class, result, prefix, this)
 
-   fun extractFileLocation(result: ResultSet, prefix: String = "") = extractToEntity(FileLocation::class, result, prefix)
+   fun extractFileLocation(result: ResultSet, prefix: String = "") = base.extractToEntity(FileLocation::class, result, prefix, this)
 
-   fun extractFileContent(result: ResultSet, prefix: String = "") = extractToEntity(FileContent::class, result, prefix)
+   fun extractFileContent(result: ResultSet, prefix: String = "") = base.extractToEntity(FileContent::class, result, prefix, this)
 
-   fun extractFileMeta(result: ResultSet, prefix: String = "") = extractToEntity(FileMeta::class, result, prefix)
+   fun extractFileMeta(result: ResultSet, prefix: String = "") = base.extractToEntity(FileMeta::class, result, prefix, this)
 
    fun loadAllIndexRun(failures: IndexRunFailures): List<IndexRun> {
       val cond = when (failures) {
@@ -113,12 +121,10 @@ open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
 
    fun getIndexRun(indexRunId: Long): IndexRun? {
       // implemented a short path to the cache to prevent making a database query
-      val entity = getEntityFromCacheOrNull(IndexRun::class, indexRunId)
-      if (entity != null) {
-         return entity as IndexRun
-      }
-      return db.dbQueryUniqueNullable(Queries.indexRun1, listOf(indexRunId)) {
-         extractIndexRun(it)
+      return base.getEntity(IndexRun::class, indexRunId) {
+         db.dbQueryUniqueNullable(Queries.indexRun1, listOf(indexRunId)) {
+            extractIndexRun(it)!!
+         }
       }
    }
 
@@ -243,8 +249,8 @@ open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
          }
    }
 
-   override fun getObjectCount(): String {
-      return filePathCache.getObjectCount() + "\n" + super.getObjectCount()
+   fun getObjectCount(): String {
+      return filePathCache.getObjectCount() + "\n" + base.getObjectCount()
    }
 }
 

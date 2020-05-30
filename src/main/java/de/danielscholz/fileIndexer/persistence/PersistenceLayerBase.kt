@@ -14,7 +14,7 @@ import java.time.Instant
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 
-open class PersistenceLayerBase(val db: Database) {
+class PersistenceLayerBase(val db: Database) {
 
    private class Types(
          var boolean: Boolean,
@@ -37,13 +37,21 @@ open class PersistenceLayerBase(val db: Database) {
 
    private val entityCache = syncronizedMutableMapOf<Pair<KClass<out EntityBase>, Long>, WeakReference<out EntityBase>>()
 
-   protected fun getEntityFromCacheOrNull(clazz: KClass<out EntityBase>, id: Long): EntityBase? {
-      val entityRef = entityCache[Pair(clazz, id)]
-      if (entityRef != null) {
-         val entity = entityRef.get()
-         if (entity != null) {
-            return entity
+   fun <T : EntityBase> getEntity(clazz: KClass<T>, id: Long, query: () -> T?): T? {
+      // implemented a short path to the cache to prevent making a database query
+      getEntityFromCacheOrNull(clazz, id)?.let {
+         return it
+      }
+      return query()
+   }
+
+   private fun <T : EntityBase> getEntityFromCacheOrNull(clazz: KClass<T>, id: Long): T? {
+      entityCache[Pair(clazz, id)]?.let { entityWeakRef ->
+         entityWeakRef.get()?.let { entity ->
+            @Suppress("UNCHECKED_CAST")
+            return entity as T
          }
+         entityCache.remove(Pair(clazz, id))
       }
       return null
    }
@@ -51,23 +59,16 @@ open class PersistenceLayerBase(val db: Database) {
    /**
     * Reads the data for the entity from resultSet and creates an instance of the entity class.
     */
-   protected fun <T : EntityBase> extractToEntity(clazz: KClass<T>, result: ResultSet, prefix: String = ""): T? {
+   fun <T : EntityBase> extractToEntity(clazz: KClass<T>, result: ResultSet, prefix: String = "", pl: PersistenceLayer): T? {
       val p = if (prefix.isNotEmpty()) prefix + "_" else ""
       val id = result.getLong("${p}id") // id maybe 0 instead of null. Because of that, we have to check via result.wasNull()
       if (!result.wasNull()) {
-         val entityRef = entityCache[Pair(clazz, id)]
-         if (entityRef != null) {
-            val entity = entityRef.get()
-            if (entity != null) {
-               @Suppress("UNCHECKED_CAST")
-               return entity as T
-            } else {
-               entityCache.remove(Pair(clazz, id))
-            }
+         getEntityFromCacheOrNull(clazz, id)?.let {
+            return it
          }
 
          val params = mutableMapOf<String, Any?>()
-         params[EntityBase::pl.name] = this
+         params[EntityBase::pl.name] = pl
          processFilteredProperties(clazz, false) { sqlPropName, entityProp ->
             if (entityProp.returnType == Types::string.returnType || entityProp.returnType == Types::stringN.returnType) {
                val customCharset = entityProp.findAnnotation<CustomCharset>()
@@ -102,7 +103,8 @@ open class PersistenceLayerBase(val db: Database) {
 
          if (clazz.constructors.count() == 1) {
             for (constructor in clazz.constructors) {
-               val entity = constructor.call(*constructor.parameters.map { params[it.name] }.toTypedArray())
+               val args = constructor.parameters.map { params[it.name] }.toTypedArray()
+               val entity = constructor.call(*args)
                entityCache[Pair(entity::class, entity.id)] = WeakReference(entity)
                return entity
             }
@@ -115,7 +117,7 @@ open class PersistenceLayerBase(val db: Database) {
    /**
     * Inserts an entity into the database and sets its ID to the newly created ID.
     */
-   protected fun <T : EntityBase> insert(entity: T, clazz: KClass<T>, validator: (T) -> Unit = { }): T {
+   fun <T : EntityBase> insert(entity: T, clazz: KClass<T>, validator: (T) -> Unit = { }): T {
       validator(entity)
       val (sqlPropNames, sqlPropValues) = getSqlPropertyNamesAndValues(entity, clazz)
       val sql = "INSERT INTO ${clazz.simpleName} (${sqlPropNames.joinToString()}) " +
@@ -128,7 +130,7 @@ open class PersistenceLayerBase(val db: Database) {
    /**
     * Validates and updates the data of an entity in the database.
     */
-   protected fun <T : EntityBase> update(entity: T, clazz: KClass<T>, validator: (T) -> Unit = { }): T {
+   fun <T : EntityBase> update(entity: T, clazz: KClass<T>, validator: (T) -> Unit = { }): T {
       validator(entity)
       val (sqlPropNames, sqlPropValues) = getSqlPropertyNamesAndValues(entity, clazz)
       sqlPropValues.add(entity.id)
@@ -172,6 +174,7 @@ open class PersistenceLayerBase(val db: Database) {
    }
 
    fun cleanupEntityCache() {
+      System.gc()
       val iterator = entityCache.values.iterator()
       while (iterator.hasNext()) {
          if (iterator.next().get() == null) {
@@ -180,8 +183,7 @@ open class PersistenceLayerBase(val db: Database) {
       }
    }
 
-   open fun getObjectCount(): String {
+   fun getObjectCount(): String {
       return "Objects in PersistenceLayerBase: " + entityCache.size
    }
-
 }
