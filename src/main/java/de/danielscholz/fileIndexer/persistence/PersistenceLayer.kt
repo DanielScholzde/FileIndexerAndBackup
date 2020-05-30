@@ -242,6 +242,10 @@ open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
                                  MatchMode.HASH + MatchMode.FILE_SIZE + MatchMode.FULL_PATH_EXCL_PREFIX + MatchMode.FILENAME, true)
          }
    }
+
+   override fun getObjectCount(): String {
+      return filePathCache.getObjectCount() + "\n" + super.getObjectCount()
+   }
 }
 
 /** returns the complete path with prefix and filename */

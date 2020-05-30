@@ -7,7 +7,6 @@ import de.danielscholz.fileIndexer.persistence.common.CustomCharset
 import de.danielscholz.fileIndexer.persistence.common.Database
 import de.danielscholz.fileIndexer.persistence.common.EntityBase
 import de.danielscholz.fileIndexer.persistence.common.processFilteredProperties
-import java.lang.IllegalStateException
 import java.lang.ref.WeakReference
 import java.nio.charset.Charset
 import java.sql.ResultSet
@@ -180,4 +179,9 @@ open class PersistenceLayerBase(val db: Database) {
          }
       }
    }
+
+   open fun getObjectCount(): String {
+      return "Objects in PersistenceLayerBase: " + entityCache.size
+   }
+
 }

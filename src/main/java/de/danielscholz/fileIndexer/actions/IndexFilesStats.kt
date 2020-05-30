@@ -4,7 +4,7 @@ import de.danielscholz.fileIndexer.Global
 import de.danielscholz.fileIndexer.common.formatAsFileSize
 import de.danielscholz.fileIndexer.common.ifZero
 import de.danielscholz.fileIndexer.common.leftPad
-import de.danielscholz.fileIndexer.gui.InfopanelSwing
+import de.danielscholz.fileIndexer.gui.InfoPanel
 import org.slf4j.LoggerFactory
 import java.text.DecimalFormat
 import java.util.concurrent.atomic.AtomicInteger
@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicLong
 import javax.swing.SwingUtilities
 import kotlin.math.roundToInt
 
-class IndexFilesStats(private var currentParallelReads: () -> String) {
+class IndexFilesStats(private var currentParallelReads: () -> String, private var otherInfos: () -> String) {
 
    private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -75,18 +75,19 @@ class IndexFilesStats(private var currentParallelReads: () -> String) {
    private fun updateInfoPanel() {
       calcProcessedMbPerSecond()
 
-      InfopanelSwing.setProgressTotal("${(indexedFilesSize.get() * 100 / filesSizeAll.ifZero(1))}% " +
-                                      "[${indexedFilesSize.get().formatAsFileSize()} / ${filesSizeAll.formatAsFileSize()}] " +
-                                      "[$indexedFilesCount / $filesCountAll]")
-      InfopanelSwing.setProgressDirectory("" + (filesProcessedDir.get() * 100 / filesDir.ifZero(1)) + "%")
-      InfopanelSwing.setDuration(getDuration())
-      InfopanelSwing.setRemainingDuration(getEstimatedDuration())
-      InfopanelSwing.setFastModeData(getFastModeStats())
-      InfopanelSwing.setNewIndexedData(Global.stat.newIndexedFilesSize.get().formatAsFileSize())
-      InfopanelSwing.setProcessedMbPerSec(decimalFormat.format(processedMbPerSecond) + " MB/sec.")
-      InfopanelSwing.setDbTime("" + (Global.stat.queryTime / 1_000_000_000) + " sec. / number: ${Global.stat.queryCount}")
-      InfopanelSwing.setCurrentParallelReads(currentParallelReads())
-      InfopanelSwing.setCurrentProcessedFilename(currentProcessedFile)
+      InfoPanel.setProgressTotal("${(indexedFilesSize.get() * 100 / filesSizeAll.ifZero(1))}% " +
+                                                                                    "[${indexedFilesSize.get().formatAsFileSize()} / ${filesSizeAll.formatAsFileSize()}] " +
+                                                                                    "[$indexedFilesCount / $filesCountAll]")
+      InfoPanel.setProgressDirectory("" + (filesProcessedDir.get() * 100 / filesDir.ifZero(1)) + "%")
+      InfoPanel.setDuration(getDuration())
+      InfoPanel.setRemainingDuration(getEstimatedDuration())
+      InfoPanel.setFastModeData(getFastModeStats())
+      InfoPanel.setNewIndexedData(Global.stat.newIndexedFilesSize.get().formatAsFileSize())
+      InfoPanel.setProcessedMbPerSec(decimalFormat.format(processedMbPerSecond) + " MB/sec.")
+      InfoPanel.setDbTime("" + (Global.stat.queryTime / 1_000_000_000) + " sec. / number: ${Global.stat.queryCount}")
+      InfoPanel.setCurrentParallelReads(currentParallelReads())
+      InfoPanel.setCurrentProcessedFilename(currentProcessedFile)
+      InfoPanel.setOtherInfos(otherInfos())
    }
 
    private fun calcProcessedMbPerSecond() {

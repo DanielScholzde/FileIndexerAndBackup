@@ -3,7 +3,7 @@ package de.danielscholz.fileIndexer.actions
 import de.danielscholz.fileIndexer.Config
 import de.danielscholz.fileIndexer.Global
 import de.danielscholz.fileIndexer.common.*
-import de.danielscholz.fileIndexer.gui.InfopanelSwing
+import de.danielscholz.fileIndexer.gui.InfoPanel
 import de.danielscholz.fileIndexer.img.ImgUtils.extractExifOriginalDateAndDimension
 import de.danielscholz.fileIndexer.img.ImgUtils.extractThumbnail
 import de.danielscholz.fileIndexer.img.ImgUtils.scaleAndSaveImg
@@ -61,7 +61,7 @@ class IndexFiles(private val path: MyPath,
    private var caseSensitiveFS = false
    private val numThreads = Runtime.getRuntime().availableProcessors()
 
-   private val stat = IndexFilesStats { getParallelReads() }
+   private val stat = IndexFilesStats({ getParallelReads() }, { pl.getObjectCount() })
 
    private var channel = Channel<suspend () -> Unit>()
 
@@ -105,7 +105,7 @@ class IndexFiles(private val path: MyPath,
 
          try {
             if (Config.INST.progressWindow) {
-               InfopanelSwing.show()
+               InfoPanel.show()
                stat.startRefresh()
             }
 
@@ -117,7 +117,7 @@ class IndexFiles(private val path: MyPath,
             pl.clearFilePathCache()
             if (Config.INST.progressWindow) {
                stat.stopRefresh()
-               InfopanelSwing.close()
+               InfoPanel.close()
             }
          }
       }

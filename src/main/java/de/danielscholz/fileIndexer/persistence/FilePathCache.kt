@@ -135,4 +135,10 @@ class FilePathCache(val pl: PersistenceLayer) {
 
    private fun convertDir(dir: File): String = dir.path.replace('\\', '/').addSlashes()
 
+   fun getObjectCount(): String {
+      return "Objects in FilePathCache: " +
+             (filePathByIdCache.size() +
+              filePathByPathCache.size() +
+              filePathByPathPartAndParentIdCache.size())
+   }
 }
