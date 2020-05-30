@@ -1,11 +1,10 @@
 package de.danielscholz.fileIndexer.persistence.common
 
 import de.danielscholz.fileIndexer.common.*
-import org.apache.commons.lang3.StringUtils
-import kotlin.collections.set
 
 fun Database.queryDebug(sql: String): String {
    val result = mutableListOf<MutableList<String>>()
+
    this.dbQuery(sql, listOf()) {
       var list = mutableListOf<String>()
       if (result.isEmpty()) {
@@ -35,21 +34,8 @@ fun Database.queryDebug(sql: String): String {
       }
       result.add(list)
    }
-   val maxx = mutableMapOf<Int, Int>()
-   for (row in result) {
-      for (i in 0..row.lastIndex) {
-         var maxLength = maxx.getOrElse(i, { 0 })
-         maxLength = max(maxLength, row[i].length)
-         maxx[i] = maxLength
-      }
-   }
 
-   return result.map {
-      val list = mutableListOf<String>()
-      for (i in 0..it.lastIndex) {
-         val maxLength = maxx.getOrElse(i, { 0 })
-         list.add(StringUtils.rightPad(it[i], maxLength))
-      }
-      list.joinToString(" | ")
-   }.joinToString("\n") + "\n"
+   return result.map { it.joinToString(" @@|@@ ") }
+             .alignColumnsOfAllRows(Regex("@@"))
+             .joinToString("\n") + "\n"
 }

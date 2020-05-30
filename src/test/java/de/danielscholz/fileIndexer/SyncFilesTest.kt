@@ -18,10 +18,8 @@ class SyncFilesTest : BaseTest() {
                    "--db", dbname,
                    "--progressWindow:no",
                    "--confirmations:no",
-                   "--mediumSerialSource", "S",
-                   "--mediumSerialTarget", "T",
                    "--timeZone", "Europe/Berlin",
-                   "$root/source/", "$root/target/")) { pl ->
+                   "[S]$root/source/", "[T]$root/target/")) { pl ->
          println(pl.db.queryDebug("Select * from IndexRun "))
          println(pl.db.queryDebug("Select * from FileLocation "))
          println(pl.db.queryDebug("Select * from FileContent "))
@@ -44,9 +42,7 @@ class SyncFilesTest : BaseTest() {
                    "--progressWindow:no",
                    "--confirmations:no",
                    "--timeZone", "Europe/Berlin",
-                   "--mediumSerialSource", "S",
-                   "--mediumSerialTarget", "T",
-                   "$root/source/", "$root/target/"))
+                   "[S]$root/source/", "[T]$root/target/"))
 
       waitUntilNextSecond()
 
@@ -59,9 +55,7 @@ class SyncFilesTest : BaseTest() {
                    "--progressWindow:no",
                    "--confirmations:no",
                    "--timeZone", "Europe/Berlin",
-                   "--mediumSerialSource", "S",
-                   "--mediumSerialTarget", "T",
-                   "$root/source/", "$root/target/")) { pl ->
+                   "[S]$root/source/", "[T]$root/target/")) { pl ->
          println(pl.db.queryDebug("Select * from IndexRun "))
          println(pl.db.queryDebug("Select * from FileLocation "))
          println(pl.db.queryDebug("Select * from FileContent "))

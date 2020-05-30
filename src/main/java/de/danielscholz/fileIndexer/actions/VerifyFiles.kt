@@ -77,7 +77,7 @@ class VerifyFiles(private val pl: PersistenceLayer, private val doPrintln: Boole
                           fileSize: Long,
                           fileLocation: FileLocation,
                           file: File): Boolean {
-      if (fileSize == fileLocation.fileContent!!.fileSize) {
+      if (fileSize == fileLocation.fileContent?.fileSize ?: 0L) {
          if (modified == fileLocation.modified) {
             if (Config.INST.fastMode && Config.INST.ignoreHashInFastMode) {
                return true
