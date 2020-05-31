@@ -111,8 +111,12 @@ class IndexFiles(private val path: MyPath,
 
             createIndex(path.toFile(), null, includedPaths.map { Path(it, it) })
 
-            indexRun!!.failureOccurred = false
-            pl.updateIndexRun(indexRun!!)
+            if (!Global.cancel) {
+               indexRun!!.failureOccurred = false
+               pl.updateIndexRun(indexRun!!)
+            } else {
+               logger.error("Index operation cancelled!")
+            }
          } finally {
             pl.clearFilePathCache()
             if (Config.INST.progressWindow) {
@@ -178,13 +182,11 @@ class IndexFiles(private val path: MyPath,
       stat.filesDir = files.size
 
       fun processFiles(files: List<File>) = runBlocking {
-         if (files.isEmpty()) {
+         if (files.isEmpty() || Global.cancel) {
             return@runBlocking
          }
 
          if (Config.INST.allowMultithreading && files.size > 1) {
-            testIfCancel(pl.db)
-
             channel = Channel()
             launch(Dispatchers.Unconfined) {
                files.map { file -> file to file.length() } // read file size for every file
@@ -200,16 +202,18 @@ class IndexFiles(private val path: MyPath,
             repeat(min(numThreads, Config.INST.maxThreads)) {
                launch(Dispatchers.Default) {
                   for (fileProcessor in channel) {
-                     fileProcessor()
+                     if (!Global.cancel) {
+                        fileProcessor()
+                     }
                   }
                }
             }
          } else {
             launch(Dispatchers.Unconfined) {
                for (file in files) {
-                  testIfCancel(pl.db)
-
-                  processFileTopLevel(file, filePath)
+                  if (!Global.cancel) {
+                     processFileTopLevel(file, filePath)
+                  }
                }
             }
          }
@@ -219,6 +223,9 @@ class IndexFiles(private val path: MyPath,
       processFiles(files.filter { !isArchiveToProcess(it) })
 
       for (folder in folders) {
+         if (Global.cancel) {
+            return filePath
+         }
          createIndex(folder.first, filePath, folder.second)
       }
 
@@ -226,7 +233,6 @@ class IndexFiles(private val path: MyPath,
    }
 
    private suspend fun processFileTopLevel(file: File, filePath: FilePath) {
-
       if (isArchiveToProcess(file)) {
          readSemaphore(file.name, file.length(), false, false) {
             val filePathCache = mutableMapOf<String, FilePath>()
@@ -247,11 +253,11 @@ class IndexFiles(private val path: MyPath,
       } else {
          processFile(file, filePath, false, false)
       }
-
       stat.filesProcessedDir++
    }
 
    private suspend fun processFile(file: File, filePath: FilePath, archiveRead: Boolean, alreadyWithinReadSemaphore: Boolean) {
+      if (Global.cancel) return
       try {
          val attributes = Files.readAttributes(file.toPath(),
                                                BasicFileAttributes::class.java,
@@ -278,6 +284,8 @@ class IndexFiles(private val path: MyPath,
          val msg = "ERROR: $file: File could not be read. ${e.javaClass.simpleName}: ${e.message}"
          Global.stat.failedFileReads.add(msg)
          logger.error(msg)
+      } catch (e: CancelException) {
+         // nothing to do
       }
    }
 

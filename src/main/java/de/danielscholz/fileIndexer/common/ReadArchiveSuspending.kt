@@ -81,6 +81,8 @@ suspend fun processArchiveSuspending(archive: File,
       processFailure(e)
    } catch (e: IOException) {
       processFailure(e)
+   } catch (e: CancelException) {
+      // nothing to do
    }
    return false
 }
