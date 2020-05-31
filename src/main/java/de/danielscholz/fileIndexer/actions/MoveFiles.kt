@@ -45,17 +45,17 @@ class MoveFiles {
       var moved = 0
       val pathsWithDeletedFiles = mutableSetOf<File>()
 
-      matched.sortedBy { it.first.path.toLowerCase() }.forEach {
+      matched.sortedBy { it.first.path.toLowerCase() }.forEach { pair ->
          try {
             if (!Config.INST.dryRun) {
-               Files.move(it.first.toPath(), it.second.toPath())
+               Files.move(pair.first.toPath(), pair.second.toPath())
             }
             if (deleteEmptyDirs) {
-               it.first.parentFile?.let { pathsWithDeletedFiles.add(it) }
+               pair.first.parentFile?.let { pathsWithDeletedFiles.add(it) }
             }
             moved++
          } catch (e: IOException) {
-            logger.error("${it.first} could not be moved")
+            logger.error("${pair.first} could not be moved")
          }
       }
 

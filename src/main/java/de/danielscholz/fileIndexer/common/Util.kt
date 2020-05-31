@@ -144,15 +144,15 @@ inline fun <T : AutoCloseable, R> Lazy<T>.tryWith(block: (Lazy<T>) -> R): R {
    }
 }
 
-fun <K, V> mutableSetMultimapOf(): SetMultimap<K, V> = HashMultimap.create<K, V>()
-fun <K, V> mutableListMultimapOf(): ListMultimap<K, V> = ArrayListMultimap.create<K, V>()
+fun <K, V> mutableSetMultimapOf(): SetMultimap<K, V> = HashMultimap.create()
+fun <K, V> mutableListMultimapOf(): ListMultimap<K, V> = ArrayListMultimap.create()
 
-fun <T> syncronizedMutableListOf(): MutableList<T> = CopyOnWriteArrayList()
-fun <K, V> syncronizedMutableMapOf(): MutableMap<K, V> = ConcurrentHashMap()
-//fun <T> syncronizedMutableSetOf(): MutableSet<T> = CopyOnWriteArraySet()
+fun <T> synchronizedMutableListOf(): MutableList<T> = CopyOnWriteArrayList()
+fun <K, V> synchronizedMutableMapOf(): MutableMap<K, V> = ConcurrentHashMap()
+//fun <T> synchronizedMutableSetOf(): MutableSet<T> = CopyOnWriteArraySet()
 
-fun <K, V> syncronizedMutableSetMultimapOf(): SetMultimap<K, V> = Multimaps.synchronizedSetMultimap(mutableSetMultimapOf())
-fun <K, V> syncronizedMutableListMultimapOf(): ListMultimap<K, V> = Multimaps.synchronizedListMultimap(mutableListMultimapOf())
+fun <K, V> synchronizedMutableSetMultimapOf(): SetMultimap<K, V> = Multimaps.synchronizedSetMultimap(mutableSetMultimapOf())
+fun <K, V> synchronizedMutableListMultimapOf(): ListMultimap<K, V> = Multimaps.synchronizedListMultimap(mutableListMultimapOf())
 
 inline fun <T, R : Comparable<R>> Iterable<T>.listMultimapBy(keySelector: (T) -> R?): ListMultimap<R, T> {
    val result = mutableListMultimapOf<R, T>()

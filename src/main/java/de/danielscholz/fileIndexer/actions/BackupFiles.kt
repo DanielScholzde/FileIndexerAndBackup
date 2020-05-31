@@ -337,10 +337,10 @@ class BackupFiles(private val pl: PersistenceLayer) {
                                       indexRun,
                                       sourceFileLocation.fileContent)
 
-      if (!Config.INST.dryRun) {
-         return pl.insertIntoFileLocation(fileLocation)
+      return if (!Config.INST.dryRun) {
+         pl.insertIntoFileLocation(fileLocation)
       } else {
-         return fileLocation
+         fileLocation
       }
    }
 
@@ -418,8 +418,8 @@ class BackupFiles(private val pl: PersistenceLayer) {
       return true
    }
 
-   fun Collection<FileLocation>.fileSize() = sumBy { it.fileContent?.fileSize ?: 0 }
+   private fun Collection<FileLocation>.fileSize() = sumBy { it.fileContent?.fileSize ?: 0 }
 
-   fun Collection<Pair<FileLocation, FileLocation>>.firstFileSize() = sumBy { it.first.fileContent?.fileSize ?: 0 }
+   private fun Collection<Pair<FileLocation, FileLocation>>.firstFileSize() = sumBy { it.first.fileContent?.fileSize ?: 0 }
 
 }

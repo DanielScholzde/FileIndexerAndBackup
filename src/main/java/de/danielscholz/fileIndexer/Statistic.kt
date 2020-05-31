@@ -1,9 +1,8 @@
 package de.danielscholz.fileIndexer
 
 import de.danielscholz.fileIndexer.common.formatAsFileSize
-import de.danielscholz.fileIndexer.common.syncronizedMutableListOf
+import de.danielscholz.fileIndexer.common.synchronizedMutableListOf
 import org.slf4j.LoggerFactory
-import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.roundToInt
@@ -18,8 +17,8 @@ class Statistic(
       var copiedFilesSize: Long = 0,
       var deletedFilesCount: Int = 0,
       var deletedFilesSize: Long = 0,
-      var failedDirReads: MutableList<String> = syncronizedMutableListOf(),
-      var failedFileReads: MutableList<String> = syncronizedMutableListOf(),
+      var failedDirReads: MutableList<String> = synchronizedMutableListOf(),
+      var failedFileReads: MutableList<String> = synchronizedMutableListOf(),
       var fastModeHitCount: AtomicInteger = AtomicInteger(),
       var notFastModeHitCount: AtomicInteger = AtomicInteger(),
       var queryCount: AtomicInteger = AtomicInteger(),

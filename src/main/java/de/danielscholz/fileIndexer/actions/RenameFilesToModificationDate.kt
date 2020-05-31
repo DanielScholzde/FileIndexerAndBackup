@@ -36,22 +36,21 @@ class RenameFilesToModificationDate(private val pl: PersistenceLayer) {
          .sortedBy { fileLocation -> fileLocation.getFullFilePath() }
          .forEach {
             var newFilename = createFilename(it)
-            var str = ""
             val file = File(it.getFullFilePath())
-            if (file.exists()) {
+            val str = if (file.exists()) {
                if (file.lastModified() == it.modified.toEpochMilli()) {
                   val createNotExistingFile = createNotExistingFile(file, newFilename)
                   newFilename = createNotExistingFile.name
                   if (Config.INST.dryRun || file.renameTo(createNotExistingFile)) {
-                     str = " (filename changed)"
+                     " (filename changed)"
                   } else {
-                     str = " (filename could not be changed)"
+                     " (filename could not be changed)"
                   }
                } else {
-                  str = " (file modification date has changed. please create a new index)"
+                  " (file modification date has changed. please create a new index)"
                }
             } else {
-               str = " (file not found)"
+               " (file not found)"
             }
 
             if (Config.INST.verbose) {

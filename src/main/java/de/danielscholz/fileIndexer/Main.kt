@@ -77,7 +77,7 @@ internal fun main(args: Array<String>,
             var commandResult: List<FileLocation>? = null
 
             // create parser which executes commands. This parser should not throw a ArgParseException.
-            val parser = createParser(toplevel, globalParams) { hasResult: Boolean, command: (PersistenceLayer, List<FileLocation>?, Boolean) -> List<FileLocation>? ->
+            val parser = createParser(toplevel, globalParams) { _, command: (PersistenceLayer, List<FileLocation>?, Boolean) -> List<FileLocation>? ->
                setRootLoggerLevel()
 
                if (Config.INST.dryRun) {
@@ -110,10 +110,10 @@ private fun openDatabaseAndRunCommands(dbFile_: File?, commands: (pl: Persistenc
    if (dbFile == null) dbFile = File("IndexedFiles")
    val inMemoryDb = dbFile.name == ":memory:"
    if (!inMemoryDb) {
-      if (!dbFile.name.endsWith(".db")) {
-         dbFile = File(dbFile.toString().ensureSuffix(".db")).canonicalFile
+      dbFile = if (!dbFile.name.endsWith(".db")) {
+         File(dbFile.toString().ensureSuffix(".db")).canonicalFile
       } else {
-         dbFile = dbFile.canonicalFile
+         dbFile.canonicalFile
       }
    }
 
@@ -141,7 +141,7 @@ private fun openDatabaseAndRunCommands(dbFile_: File?, commands: (pl: Persistenc
    }
 }
 
-@Suppress("DuplicatedCode")
+@Suppress("DuplicatedCode", "UNUSED_ANONYMOUS_PARAMETER")
 private fun createParser(toplevel: Boolean,
                          globalParams: GlobalParams,
                          outerCallback: (Boolean, (PersistenceLayer, List<FileLocation>?, Boolean) -> List<FileLocation>?) -> Unit): ArgParser<GlobalParams> {
@@ -631,16 +631,16 @@ private fun loggerInfo(propertyName: String, propertyValue: Any?) {
       if (value is TimeZone) return TimeZoneParam().convertToStr(value)
       if (value is IntRange) return IntRangeParam().convertToStr(value)
       if (value is IndexFiles.ReadConfig) return ReadConfigParam().convertToStr(value)
-      return if (value != null) value.toString() else ""
+      return value?.toString() ?: ""
    }
 
-   var value: Any? = propertyValue
-   if (value is Collection<*>) {
-      value = value.joinToString(transform = { convertSingle(it).toString() })
+   var value = propertyValue
+   value = if (value is Collection<*>) {
+      value.joinToString { convertSingle(it).toString() }
    } else {
-      value = convertSingle(value)
+      convertSingle(value)
    }
-   logger.info("${propertyName} = $value")
+   logger.info("$propertyName = $value")
 }
 
 // todo auto_vacuum

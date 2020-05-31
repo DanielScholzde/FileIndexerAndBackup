@@ -38,10 +38,10 @@ class DeleteFiles {
 
                if (!Config.INST.dryRun) {
                   if (deleteConfirmationExists == null) {
-                     if (!Config.INST.confirmations) {
-                        deleteConfirmationExists = true
+                     deleteConfirmationExists = if (!Config.INST.confirmations) {
+                        true
                      } else {
-                        deleteConfirmationExists = JOptionPane.showConfirmDialog(
+                        JOptionPane.showConfirmDialog(
                               null,
                               "All ${files.size} files will be deleted.\n" +
                               "Do you want to proceed?",

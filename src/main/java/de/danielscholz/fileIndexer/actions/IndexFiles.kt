@@ -56,7 +56,7 @@ class IndexFiles(private val path: MyPath,
    private val lastIndexedFileLocationsByKey = mutableListMultimapOf<Key, FileLocation>()
 
    private var indexRun: IndexRun? = null
-   private val indexedFileLocationIdsByKey = syncronizedMutableSetMultimapOf<Key, Long>() // to recognize hardlinks
+   private val indexedFileLocationIdsByKey = synchronizedMutableSetMultimapOf<Key, Long>() // to recognize hardlinks
    private var maxReferenceInode = 0L
    private var caseSensitiveFS = false
    private val numThreads = Runtime.getRuntime().availableProcessors()
@@ -539,10 +539,10 @@ class IndexFiles(private val path: MyPath,
 
    private fun saveThumbnail(ext: String?, imgContent: ByteArray, fileContentId: Long) {
       val thumbnail: ByteArray?
-      if (ext in Config.INST.rawImagesExtensions) {
-         thumbnail = extractThumbnail(imgContent)
+      thumbnail = if (ext in Config.INST.rawImagesExtensions) {
+         extractThumbnail(imgContent)
       } else {
-         thumbnail = imgContent
+         imgContent
       }
       if (thumbnail != null) {
          val bucket = ("" + (fileContentId / 1000)).leftPad(4, '0')

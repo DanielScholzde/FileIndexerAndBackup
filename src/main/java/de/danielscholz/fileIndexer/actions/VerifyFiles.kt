@@ -86,11 +86,11 @@ class VerifyFiles(private val pl: PersistenceLayer, private val doPrintln: Boole
                val checksumCreator = ChecksumCreator(InputStreamWrapperImpl(it), fileSize)
                if (Config.INST.fastMode) {
                   val checksumFromBeginTemp = checksumCreator.getChecksumFromBeginTemp().joinToString(",")
-                  if (fileLocation.fileContent!!.hashBegin.startsWith(checksumFromBeginTemp)) {
-                     return true
+                  return if (fileLocation.fileContent!!.hashBegin.startsWith(checksumFromBeginTemp)) {
+                     true
                   } else {
                      myPrintln("$file has different hash")
-                     return false
+                     false
                   }
                }
                val equal = fileLocation.fileContent!!.hash == checksumCreator.calcChecksum().sha1

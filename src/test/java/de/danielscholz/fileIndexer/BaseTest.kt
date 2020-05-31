@@ -1,12 +1,11 @@
 package de.danielscholz.fileIndexer
 
-import de.danielscholz.fileIndexer.common.syncronizedMutableListOf
+import de.danielscholz.fileIndexer.common.synchronizedMutableListOf
 import org.junit.After
 import org.junit.Before
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.*
-import java.lang.Exception
 import java.nio.file.Files
 import kotlin.test.fail
 
@@ -16,8 +15,8 @@ open class BaseTest(val dbname: String = "target/test-classes/test.db") {
 
    protected val baseRootDir = "target/test-classes"
 
-   private val createdFiles = syncronizedMutableListOf<File>()
-   private val createdDirs = syncronizedMutableListOf<File>()
+   private val createdFiles = synchronizedMutableListOf<File>()
+   private val createdDirs = synchronizedMutableListOf<File>()
 
    private var outOriginal: PrintStream? = null
    private var outBuffer: ByteArrayOutputStream? = null

@@ -44,10 +44,14 @@ class FilterFiles {
    }
 
    private fun getRegex(pathFilter: String?, isJavaRegex: Boolean): Regex? {
-      return if (pathFilter != null) {
-         if (isJavaRegex) {
+      return when {
+         pathFilter == null       -> {
+            null
+         }
+         isJavaRegex              -> {
             Regex(pathFilter)
-         } else if (pathFilter.contains('*')) {
+         }
+         pathFilter.contains('*') -> {
             val pathFilterEscaped = pathFilter
                .replace("[", "\\[")
                .replace("]", "\\]")
@@ -63,8 +67,9 @@ class FilterFiles {
                      .replace("**", "@@@@@@@@")
                      .replace("*", "[^/]*")
                      .replace("@@@@@@@@", ".*"))
-         } else null
-      } else null
+         }
+         else                     -> null
+      }
    }
 
 }

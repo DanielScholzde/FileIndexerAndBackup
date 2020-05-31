@@ -52,19 +52,19 @@ class CorrectDiffInFileModificationDateAndExifDateTaken(private val pl: Persiste
             val imgExifOriginalDate = it.fileContent?.fileMeta?.imgExifOriginalDate
             if (imgExifOriginalDate != null) {
                val file = File(it.getFullFilePath())
-               if (file.exists()) {
+               str = if (file.exists()) {
                   val millisec = imgExifOriginalDate.toEpochMilli()
                   if (file.lastModified() != millisec) {
                      if (Config.INST.dryRun || file.setLastModified(millisec)) {
-                        str = " (date/time corrected)"
+                        " (date/time corrected)"
                      } else {
-                        str = " (modification date could not be changed)"
+                        " (modification date could not be changed)"
                      }
                   } else {
-                     str = " (date/time already corrected)"
+                     " (date/time already corrected)"
                   }
                } else {
-                  str = " (File not found)"
+                  " (File not found)"
                }
             }
 

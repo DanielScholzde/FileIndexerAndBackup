@@ -1,7 +1,7 @@
 package de.danielscholz.fileIndexer.persistence
 
 import de.danielscholz.fileIndexer.common.isNotEmpty
-import de.danielscholz.fileIndexer.common.syncronizedMutableMapOf
+import de.danielscholz.fileIndexer.common.synchronizedMutableMapOf
 import de.danielscholz.fileIndexer.common.toInstant
 import de.danielscholz.fileIndexer.persistence.common.CustomCharset
 import de.danielscholz.fileIndexer.persistence.common.Database
@@ -35,7 +35,7 @@ class PersistenceLayerBase(val db: Database) {
                                        Types::int.returnType,
                                        Types::intN.returnType)
 
-   private val entityCache = syncronizedMutableMapOf<Pair<KClass<out EntityBase>, Long>, WeakReference<out EntityBase>>()
+   private val entityCache = synchronizedMutableMapOf<Pair<KClass<out EntityBase>, Long>, WeakReference<out EntityBase>>()
 
    fun <T : EntityBase> getEntity(clazz: KClass<T>, id: Long, query: () -> T?): T? {
       // implemented a short path to the cache to prevent making a database query

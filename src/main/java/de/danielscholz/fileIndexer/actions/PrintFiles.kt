@@ -6,7 +6,7 @@ import de.danielscholz.fileIndexer.persistence.getFullFilePath
 import de.danielscholz.fileIndexer.persistence.getFullPath
 import org.slf4j.LoggerFactory
 
-class PrintFiles() {
+class PrintFiles {
 
    private val logger = LoggerFactory.getLogger(javaClass)
 
