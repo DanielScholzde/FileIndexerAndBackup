@@ -1,4 +1,4 @@
-package de.danielscholz.fileIndexer.common
+package de.danielscholz.fileIndexer.argumentParser
 
 import de.danielscholz.fileIndexer.actions.IndexFiles
 import de.danielscholz.kargparser.ArgParseException

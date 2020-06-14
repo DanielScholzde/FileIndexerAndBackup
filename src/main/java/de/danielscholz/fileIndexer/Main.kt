@@ -1,6 +1,10 @@
 package de.danielscholz.fileIndexer
 
 import de.danielscholz.fileIndexer.actions.*
+import de.danielscholz.fileIndexer.argumentParser.MyPathListParam
+import de.danielscholz.fileIndexer.argumentParser.MyPathParam
+import de.danielscholz.fileIndexer.argumentParser.ReadConfigParam
+import de.danielscholz.fileIndexer.argumentParser.TimeZoneParam
 import de.danielscholz.fileIndexer.common.*
 import de.danielscholz.fileIndexer.persistence.FileLocation
 import de.danielscholz.fileIndexer.persistence.PersistenceLayer
