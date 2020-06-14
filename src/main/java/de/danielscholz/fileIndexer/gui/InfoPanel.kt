@@ -1,7 +1,10 @@
 package de.danielscholz.fileIndexer.gui
 
 import de.danielscholz.fileIndexer.Global
-import java.awt.GridLayout
+import java.awt.Container
+import java.awt.GridBagConstraints
+import java.awt.GridBagLayout
+import java.awt.Insets
 import javax.swing.*
 
 class InfoPanel {
@@ -72,7 +75,7 @@ class InfoPanel {
       }
 
       init {
-         JFrame.setDefaultLookAndFeelDecorated(true)
+         UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName())
       }
    }
 
@@ -94,34 +97,79 @@ class InfoPanel {
       frame.defaultCloseOperation = WindowConstants.HIDE_ON_CLOSE
       frame.title = "FileIndexerAndBackup - indexing progress"
       frame.isResizable = true
-      frame.layout = GridLayout(0, 2)
-      frame.setSize(600, 300)
-      frame.add(JLabel("Time: "))
-      frame.add(duration)
-      frame.add(JLabel("Remaining time: "))
-      frame.add(remainingDuration)
-      frame.add(JLabel("Progress directory: "))
-      frame.add(progressDirectory)
-      frame.add(JLabel("Progress total: "))
-      frame.add(progressTotal)
-      frame.add(JLabel("FastMode statistic: "))
-      frame.add(fastMode)
-      frame.add(JLabel("New indexed: "))
-      frame.add(newIndexedData)
-      frame.add(JLabel("Processed data per sec.: "))
-      frame.add(processedMbPerSecond)
-      frame.add(JLabel("DB time: "))
-      frame.add(dbTime)
-      frame.add(JLabel("Parallel reads: "))
-      frame.add(currentParallelReads)
-      frame.add(JLabel("Processing file: "))
-      frame.add(currentProcessedFilename)
-      frame.add(JLabel("other infos: "))
-      frame.add(otherInfos)
-      otherInfos.isEditable = false
-      frame.add(cancel)
-      cancel.addActionListener { e -> Global.cancel = true }
-      //frame.pack();
+      frame.setSize(700, 400)
+
+      addGuiElements(frame.contentPane)
+
+      //otherInfos.background = Color(255, 255, 255, 255)
+      //frame.pack()
    }
 
+   private fun addGuiElements(pane: Container) {
+      pane.layout = object : GridBagLayout() {
+         override fun getLayoutAlignmentY(parent: Container?): Float {
+            return 0f
+         }
+      }
+
+      val c = GridBagConstraints()
+      c.fill = GridBagConstraints.BOTH
+//      c.ipadx = 3
+//      c.ipady = 3
+      c.insets = Insets(3, 4, 3, 4)
+      c.anchor = GridBagConstraints.FIRST_LINE_START
+
+      pane.add(JLabel("Time: ").left(), c.next())
+      pane.add(duration, c.next())
+      pane.add(JLabel("Remaining time: ").left(), c.next())
+      pane.add(remainingDuration, c.next())
+      pane.add(JLabel("Progress directory: ").left(), c.next())
+      pane.add(progressDirectory, c.next())
+      pane.add(JLabel("Progress total: ").left(), c.next())
+      pane.add(progressTotal, c.next())
+      pane.add(JLabel("FastMode statistic: ").left(), c.next())
+      pane.add(fastMode, c.next())
+      pane.add(JLabel("New indexed: ").left(), c.next())
+      pane.add(newIndexedData, c.next())
+      pane.add(JLabel("Processed data per sec.: ").left(), c.next())
+      pane.add(processedMbPerSecond, c.next())
+      pane.add(JLabel("DB time: ").left(), c.next())
+      pane.add(dbTime, c.next())
+      pane.add(JLabel("Parallel reads: ").left(), c.next())
+      pane.add(currentParallelReads, c.next())
+      pane.add(JLabel("Processing file: ").left(), c.next())
+      pane.add(currentProcessedFilename, c.next())
+      pane.add(JLabel("other infos: ").left(), c.next())
+      pane.add(otherInfos, c.next())
+      otherInfos.isEditable = false
+      pane.add(cancel.left(), c.next())
+      cancel.addActionListener { e -> Global.cancel = true }
+   }
+
+   var row = 0
+   var col = 0
+
+   private fun GridBagConstraints.next(): GridBagConstraints {
+      this.gridx = col
+      this.gridy = row
+      if (col == 0) {
+         this.weightx = 0.25
+      } else {
+         this.weightx = 1 - this.weightx
+      }
+
+      col++
+      if (col > 1) {
+         row++
+         col = 0
+      }
+      return this
+   }
+
+   private fun JComponent.left(): JComponent {
+//      this.minimumSize = Dimension(200, 20)
+//      this.preferredSize = Dimension(200, 20)
+//      this.maximumSize = Dimension(200, 20)
+      return this
+   }
 }
