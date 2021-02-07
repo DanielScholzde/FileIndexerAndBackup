@@ -134,7 +134,7 @@ class ImportOldDatabase(val pl: PersistenceLayer, val oldDbFile: File, val mediu
          val fileLocation = pl.extractFileLocation(it, "l")!!
          val fileSize = it.getLong("fileSize")
          val hash = it.getString("hash")
-         fileLocationMap[hash + "@" + fileSize] = fileLocation
+         fileLocationMap["$hash@$fileSize"] = fileLocation
          fileLocation
       }
 
