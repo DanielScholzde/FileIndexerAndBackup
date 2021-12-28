@@ -35,7 +35,7 @@ suspend fun processArchiveSuspending(archive: File,
    }
 
    try {
-      if (archive.name.toLowerCase().endsWith(".zip")) {
+      if (archive.name.lowercase().endsWith(".zip")) {
          // Cp437 ist der Default (MS-DOS Encoding)
          ZipFile(archive, "Cp437").tryWith { zipFile ->
             for (zipArchiveEntry in zipFile.entriesInPhysicalOrder) {
@@ -46,13 +46,13 @@ suspend fun processArchiveSuspending(archive: File,
                }
             }
          }
-      } else if (archive.name.toLowerCase().endsWith(".tar.gz")) {
+      } else if (archive.name.lowercase().endsWith(".tar.gz")) {
          BufferedInputStream(FileInputStream(archive)).tryWith { stream ->
             TarArchiveInputStream(GzipCompressorInputStream(stream)).tryWith { archiveInputStream ->
                processArchiveStream(archiveInputStream).handleException()
             }
          }
-      } else if (!archive.name.toLowerCase().endsWith(".7z")) {
+      } else if (!archive.name.lowercase().endsWith(".7z")) {
          BufferedInputStream(FileInputStream(archive)).tryWith { stream ->
             ArchiveStreamFactory().createArchiveInputStream(stream).tryWith { archiveInputStream ->
                processArchiveStream(archiveInputStream).handleException()

@@ -91,7 +91,7 @@ class ImportOldDatabase(val pl: PersistenceLayer, val oldDbFile: File, val mediu
       Database(oldDbFile.toString()).tryWith { oldDb ->
 
          val oldPl = OldPersistenceLayer(oldDb)
-         if (oldPl.db.dbQueryUniqueStr("PRAGMA integrity_check").toLowerCase() != "ok") {
+         if (oldPl.db.dbQueryUniqueStr("PRAGMA integrity_check").lowercase() != "ok") {
             logger.error("ERROR: Datenbank ist nicht konsistent! Beende Programm.")
             throw Exception("Datenbank ist nicht konsistent! Beende Programm.")
          }

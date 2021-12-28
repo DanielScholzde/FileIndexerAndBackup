@@ -20,7 +20,7 @@ fun readDir(dir: File, caseSensitive: Boolean, includePaths: List<Path> = listOf
    val folders: MutableList<Pair<File, List<Path>>> = mutableListOf()
    val filesAndDirs = dir.listFiles()
    if (filesAndDirs != null) {
-      for (fileEntry in filesAndDirs.sortedBy { it.name.toLowerCase() }) {
+      for (fileEntry in filesAndDirs.sortedBy { it.name.lowercase() }) {
          if (fileEntry.isDirectory) {
             val matched = matchesPath(fileEntry.name, includePaths, caseSensitive)
             if (includePaths.isEmpty() || matched.isNotEmpty()) {
@@ -61,7 +61,7 @@ private fun matchesPath(name: String, includePaths: List<Path>, caseSensitive: B
    var matched = listOf<Path>()
    if (includePaths.isNotEmpty()) {
       matched = includePaths.filter {
-         val b = it.path.equals(name, !caseSensitive) || it.path.startsWith(name + "/", !caseSensitive)
+         val b = it.path.equals(name, !caseSensitive) || it.path.startsWith("$name/", !caseSensitive)
          if (b) it.used = true
          b
       }
@@ -86,7 +86,7 @@ fun readAllDirInfos(dir: File, scanArchiveContents: Boolean, includePaths: List<
    fun readDirIntern(dir: File, includePaths: List<Path>) {
       val filesAndDirs = dir.listFiles()
       if (filesAndDirs != null) {
-         for (fileEntry in filesAndDirs.sortedBy { it.name.toLowerCase() }) {
+         for (fileEntry in filesAndDirs.sortedBy { it.name.lowercase() }) {
             val name = fileEntry.name
             val attributes = Files.readAttributes(fileEntry.toPath(), BasicFileAttributes::class.java, LinkOption.NOFOLLOW_LINKS)
             if (attributes.isDirectory) {
@@ -99,7 +99,7 @@ fun readAllDirInfos(dir: File, scanArchiveContents: Boolean, includePaths: List<
             } else if (attributes.isRegularFile) {
                if (!isExcludedFile(fileEntry, result.caseSensitive, result.excluded)) {
                   var archiveRead = false
-                  if (scanArchiveContents && fileEntry.extension.toLowerCase() in Config.INST.archiveExtensions) {
+                  if (scanArchiveContents && fileEntry.extension.lowercase() in Config.INST.archiveExtensions) {
                      archiveRead = processArchive(
                            fileEntry,
                            { _, archiveEntry ->
@@ -169,8 +169,8 @@ private fun isExcludedDir(fileEntry: File, caseSensitive: Boolean, stats: Exclud
 
 fun isCaseSensitiveFileSystem(dir: File): Boolean? {
 
-   if (dir.path.toLowerCase() != dir.path.toUpperCase() && dir.isDirectory) {
-      if (File(dir.path.toLowerCase()).isDirectory && File(dir.path.toUpperCase()).isDirectory) {
+   if (dir.path.lowercase() != dir.path.uppercase() && dir.isDirectory) {
+      if (File(dir.path.lowercase()).isDirectory && File(dir.path.uppercase()).isDirectory) {
          return false
       }
       return true
@@ -182,18 +182,18 @@ fun isCaseSensitiveFileSystem(dir: File): Boolean? {
          val name = fileEntry.name
          val subDirs = mutableListOf<File>()
          if (fileEntry.isDirectory) {
-            if (name.toLowerCase() != name.toUpperCase()) {
-               if (File(fileEntry.path.toLowerCase()).isDirectory &&
-                   File(fileEntry.path.toUpperCase()).isDirectory) {
+            if (name.lowercase() != name.uppercase()) {
+               if (File(fileEntry.path.lowercase()).isDirectory &&
+                   File(fileEntry.path.uppercase()).isDirectory) {
                   return false
                }
                return true
             }
             subDirs.add(fileEntry)
          } else {
-            if (name.toLowerCase() != name.toUpperCase()) {
-               if (File(fileEntry.path.toLowerCase()).isFile &&
-                   File(fileEntry.path.toUpperCase()).isFile) {
+            if (name.lowercase() != name.uppercase()) {
+               if (File(fileEntry.path.lowercase()).isFile &&
+                   File(fileEntry.path.uppercase()).isFile) {
                   return false
                }
                return true

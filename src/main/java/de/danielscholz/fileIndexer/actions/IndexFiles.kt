@@ -20,7 +20,6 @@ import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
-import java.lang.IllegalStateException
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.attribute.BasicFileAttributes
@@ -376,7 +375,7 @@ class IndexFiles(private val dir: File,
             var minOneOtherFileLocationWithSameInode = false
             val foundFileLocations = searchInAlreadyIndexedFilesForHardlinks(filePath, filename, fileSize, modified)
             if (foundFileLocations.isNotEmpty()) {
-               val minExistingRefInode = foundFileLocations.mapNotNull { it.referenceInode }.minBy { it }
+               val minExistingRefInode = foundFileLocations.mapNotNull { it.referenceInode }.minOfOrNull { it }
                for (fileLocation in foundFileLocations) {
                   // update only the current indexRun layer except it is explicitly demanded
                   if (updateHardlinksInLastIndex || fileLocation.indexRunId == indexRun!!.id) {
@@ -399,7 +398,7 @@ class IndexFiles(private val dir: File,
             }
          }
 
-         val extension = filename.getFileExtension()?.toLowerCase()
+         val extension = filename.getFileExtension()?.lowercase()
          val lazyImgContent = if (extension in Config.INST.imageExtensions && fileSize < 50_000_000) {
             myLazy { ByteArray(fileSize.toInt()) }
          } else {
@@ -573,7 +572,7 @@ class IndexFiles(private val dir: File,
       if (!caseSensitiveFS) {
          val p1 = pl.getFilePath(fileLocationLastIndex.filePathId).path
          val p2 = filePath.path
-         if (p1.length == p2.length && p1.toLowerCase() == p2.toLowerCase()) {
+         if (p1.length == p2.length && p1.lowercase() == p2.lowercase()) {
             return true
          }
       }
@@ -585,7 +584,7 @@ class IndexFiles(private val dir: File,
          return true
       }
       if (!caseSensitiveFS) {
-         return p1.length == p2.length && p1.toLowerCase() == p2.toLowerCase()
+         return p1.length == p2.length && p1.lowercase() == p2.lowercase()
       }
       return false
    }
@@ -627,7 +626,7 @@ class IndexFiles(private val dir: File,
 
    private fun isAlwaysCheckHash(filename: String): Boolean = Config.INST.alwaysCheckHashOnIndexForFilesSuffix.any { filename.endsWith(it) }
 
-   private fun isArchiveToProcess(file: File) = indexArchiveContents && file.extension.toLowerCase() in Config.INST.archiveExtensions
+   private fun isArchiveToProcess(file: File) = indexArchiveContents && file.extension.lowercase() in Config.INST.archiveExtensions
 
    private val mutexArray = Array(42) { Mutex() }
 

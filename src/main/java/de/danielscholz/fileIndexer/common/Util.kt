@@ -53,7 +53,7 @@ fun registerShutdownCallback(exitCallback: () -> Unit) {
 
 fun setRootLoggerLevel() {
    val rootLogger = LoggerFactory.getLogger(ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME) as ch.qos.logback.classic.Logger
-   rootLogger.level = when (Config.INST.logLevel.toLowerCase()) {
+   rootLogger.level = when (Config.INST.logLevel.lowercase()) {
       "info"  -> ch.qos.logback.classic.Level.INFO
       "debug" -> ch.qos.logback.classic.Level.DEBUG
       "trace" -> ch.qos.logback.classic.Level.TRACE
@@ -149,7 +149,7 @@ fun <K, V> syncronizedMutableMapOf(): MutableMap<K, V> = ConcurrentHashMap()
 fun <K, V> syncronizedMutableSetMultimapOf(): SetMultimap<K, V> = Multimaps.synchronizedSetMultimap(mutableSetMultimapOf())
 fun <K, V> syncronizedMutableListMultimapOf(): ListMultimap<K, V> = Multimaps.synchronizedListMultimap(mutableListMultimapOf())
 
-inline fun <T, R : Comparable<R>> Iterable<T>.listMultimapBy(keySelector: (T) -> R?): ListMultimap<R, T> {
+inline fun <T, R : Comparable<R>> Iterable<T>.listMultimapBy(keySelector: (T) -> R): ListMultimap<R, T> {
    val result = mutableListMultimapOf<R, T>()
    for (it in this) {
       result.put(keySelector(it), it)
@@ -255,7 +255,7 @@ fun Long.toStr(): String {
 fun getVolumeSerialNr(dir: File): String? {
    val volumeNr = Files.getFileStore(dir.toPath()).getAttribute("volume:vsn")
    if (volumeNr is Int) {
-      return Integer.toHexString(volumeNr).toUpperCase()
+      return Integer.toHexString(volumeNr).uppercase()
    }
    if (volumeNr != null) throw IllegalStateException()
    return null

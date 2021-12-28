@@ -55,7 +55,7 @@ class Database(val dbFile: String) : Closeable {
                   }
 
                   val rs = prepStmt.generatedKeys
-                  if (sql.toLowerCase().trim().startsWith("insert") && rs.next()) {
+                  if (sql.lowercase().trim().startsWith("insert") && rs.next()) {
                      return@tryWith logSql(rs.getLong(1), sql, params) // inserted ID
                   }
                   return@tryWith logSql(count.toLong(), sql, params)

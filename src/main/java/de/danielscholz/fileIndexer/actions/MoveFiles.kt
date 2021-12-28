@@ -44,7 +44,7 @@ class MoveFiles {
       var moved = 0
       val pathsWithDeletedFiles = mutableSetOf<File>()
 
-      matched.sortedBy { it.first.path.toLowerCase() }.forEach {
+      matched.sortedBy { it.first.path.lowercase() }.forEach {
          try {
             if (!Config.INST.dryRun) {
                Files.move(it.first.toPath(), it.second.toPath())

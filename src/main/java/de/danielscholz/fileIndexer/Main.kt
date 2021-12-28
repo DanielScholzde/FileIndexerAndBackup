@@ -121,7 +121,7 @@ private fun openDatabaseAndRunCommands(dbFile_: File?, commands: (pl: Persistenc
    Database(dbFile.toString()).tryWith { db ->
       val pl = PersistenceLayer(db)
       logger.info("Perform database integrity check")
-      if (pl.db.dbQueryUniqueStr("PRAGMA integrity_check").toLowerCase() != "ok") {
+      if (pl.db.dbQueryUniqueStr("PRAGMA integrity_check").lowercase() != "ok") {
          logger.error("ERROR: Integrity check of database failed! Exit program.")
          throw Exception("Integrity check of database failed! Exit program.")
       }

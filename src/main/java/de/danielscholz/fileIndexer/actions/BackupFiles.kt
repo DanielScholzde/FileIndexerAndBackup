@@ -389,8 +389,8 @@ class BackupFiles(private val pl: PersistenceLayer) {
    }
 
    private fun testCaseSensitive(targetDir: File): Boolean {
-      if (targetDir.name.toLowerCase() != targetDir.name.toUpperCase()) {
-         if (File(targetDir.path.toLowerCase()).isDirectory && File(targetDir.path.toUpperCase()).isDirectory) {
+      if (targetDir.name.lowercase() != targetDir.name.uppercase()) {
+         if (File(targetDir.path.lowercase()).isDirectory && File(targetDir.path.uppercase()).isDirectory) {
             return false
          }
       }

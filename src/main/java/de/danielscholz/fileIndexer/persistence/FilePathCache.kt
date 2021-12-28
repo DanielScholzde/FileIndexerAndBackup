@@ -71,7 +71,7 @@ class FilePathCache(val pl: PersistenceLayer) {
                pl.extractFilePath(it)!!
             }
          }
-      })!!
+      })
 
    private fun searchFilePath(pathPart: String, parentFilePathId: Long?): FilePath? {
       val cachedValue = filePathByPathPartAndParentIdCache.get(Pair(pathPart, parentFilePathId ?: -1))
@@ -95,7 +95,7 @@ class FilePathCache(val pl: PersistenceLayer) {
             }
             return result ?: nullElem
          }
-      })!!
+      })
 
    private val filePathByPathCache: LoadingCache<String, FilePath> = CacheBuilder.newBuilder()
       .maximumSize(10000)
@@ -106,7 +106,7 @@ class FilePathCache(val pl: PersistenceLayer) {
             }
             return result ?: nullElem
          }
-      })!!
+      })
 
    /**
     * Splittet einen Verzeichnis-Pfad in seine einzelnen Bestandteile

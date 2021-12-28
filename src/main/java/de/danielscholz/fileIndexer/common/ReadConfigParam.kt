@@ -10,7 +10,7 @@ class ReadConfigParam : ParamParserBase<IndexFiles.ReadConfig, IndexFiles.ReadCo
    private var value: IndexFiles.ReadConfig? = null
 
    override fun matches(rawValue: String): Boolean {
-      return rawValue.toLowerCase() in IndexFiles.ReadConfig.configs.keys.map { it.toLowerCase() }
+      return rawValue.lowercase() in IndexFiles.ReadConfig.configs.keys.map { it.lowercase() }
    }
 
    override fun assign(rawValue: String) {

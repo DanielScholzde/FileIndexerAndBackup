@@ -9,7 +9,6 @@ import de.danielscholz.fileIndexer.persistence.Queries
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.LoggerFactory
 import java.io.File
-import java.util.*
 
 class ListIndexRuns(private val pl: PersistenceLayer) {
 
@@ -61,10 +60,10 @@ class ListIndexRuns(private val pl: PersistenceLayer) {
 
    private fun List<String>.transform(): List<String> {
       val listOfLists = this.map { it.split(Regex("@@")) }
-      val maxColumnCount = listOfLists.map { it.size }.max() ?: 0
+      val maxColumnCount = listOfLists.map { it.size }.maxOrNull() ?: 0
 
       for (i in 0 until maxColumnCount) {
-         val max = listOfLists.map { if (i <= it.lastIndex) it[i] else "" }.map { it.length }.max() ?: 0
+         val max = listOfLists.map { if (i <= it.lastIndex) it[i] else "" }.map { it.length }.maxOrNull() ?: 0
          listOfLists.forEach {
             if (i <= it.lastIndex && it[i].length < max) {
                (it as MutableList<String>)[i] = StringUtils.rightPad(it[i], max)

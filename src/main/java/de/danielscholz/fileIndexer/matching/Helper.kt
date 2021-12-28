@@ -31,11 +31,11 @@ fun createKey(fileLocation: FileLocation, mode: EnumSet<MatchMode>): String {
    }
    if (MatchMode.FULL_PATH in mode) {
       val path = fileLocation.getFullPath()
-      b.append(if (fileLocation.indexRun!!.mediumCaseSensitive) path else path.toLowerCase()).append("@")
+      b.append(if (fileLocation.indexRun!!.mediumCaseSensitive) path else path.lowercase()).append("@")
    }
    if (MatchMode.FULL_PATH_EXCL_PREFIX in mode) {
       val path = fileLocation.getFullPathExclPrefix()
-      b.append(if (fileLocation.indexRun!!.mediumCaseSensitive) path else path.toLowerCase()).append("@")
+      b.append(if (fileLocation.indexRun!!.mediumCaseSensitive) path else path.lowercase()).append("@")
    }
    if (MatchMode.REL_PATH in mode) {
       val mediumCaseSensitive = fileLocation.indexRun!!.mediumCaseSensitive
@@ -47,12 +47,12 @@ fun createKey(fileLocation: FileLocation, mode: EnumSet<MatchMode>): String {
             break
          }
       }
-      b.append(if (mediumCaseSensitive) path else path.toLowerCase()).append("@")
+      b.append(if (mediumCaseSensitive) path else path.lowercase()).append("@")
    }
    if (MatchMode.REL_PATH2 in mode) {
       val mediumCaseSensitive = fileLocation.indexRun!!.mediumCaseSensitive
       val path = fileLocation.pl.getFilePath(fileLocation.filePathId).path
-      b.append(if (mediumCaseSensitive) path else path.toLowerCase()).append("@")
+      b.append(if (mediumCaseSensitive) path else path.lowercase()).append("@")
    }
    if (MatchMode.FILENAME in mode) {
       b.append(fileLocation.filename).append("@")
