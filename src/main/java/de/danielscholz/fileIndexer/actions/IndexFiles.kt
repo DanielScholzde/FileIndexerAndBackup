@@ -235,10 +235,10 @@ class IndexFiles(
 
                val archiveRead = processArchiveSuspending(
                   file,
-                  { stream, archiveEntry ->
+                  processEntry = { stream, archiveEntry ->
                      processArchiveFile(file, stream, archiveEntry, filePath, filePathCache)
                   },
-                  { exception ->
+                  processFailure = { exception ->
                      val msg = "ERROR: $file: Content of archive could not be read. ${exception.javaClass.simpleName}: ${exception.message}"
                      Global.stat.failedFileReads.add(msg)
                      logger.error(msg)
@@ -289,6 +289,46 @@ class IndexFiles(
          Global.stat.failedFileReads.add(msg)
          logger.error(msg)
       }
+   }
+
+   private suspend fun processArchiveFile(
+      archiveFile: File,
+      stream: InputStreamWrapper,
+      entry: ArchiveEntry,
+      parentFilePath: FilePath,
+      filePathCache: MutableMap<String, FilePath>
+   ) {
+      val pathAndFilename = entry.name.replace('\\', '/')
+      val filename = pathAndFilename.substringAfterLast("/")
+      val pathWithinArchive = pathAndFilename.substringBeforeLast("/", "")
+      val path = parentFilePath.path + archiveFile.name + "/" + pathWithinArchive
+      val filePath: FilePath
+      if (path.isNotEmpty()) {
+         if (filePathCache.containsKey(path)) {
+            filePath = filePathCache[path]!!
+         } else {
+            filePath = pl.getOrInsertFullFilePath(File(path))
+            filePathCache[path] = filePath
+            //logger.info("{}", File("$archive/$pathWithinArchive"))
+         }
+      } else {
+         filePath = pl.getFilePath(Queries.filePathRootId)
+      }
+      val modified = entry.lastModifiedDate.toInstant()
+
+      return processFileStream(
+         filePath,
+         filename,
+         myLazy { stream },
+         modified,
+         modified,
+         entry.size,
+         hidden = false,
+         inArchive = true,
+         archiveName = archiveFile.name,
+         archiveRead = true,
+         alreadyWithinReadSemaphore = true
+      )
    }
 
    private suspend fun processFileStream(
@@ -617,47 +657,7 @@ class IndexFiles(
    private fun getFullPathWithoutPrefix(fileLocation: FileLocation) =
       fileLocation.indexRun!!.path + pl.getFilePath(fileLocation.filePathId).path.removePrefix("/")
 
-   private suspend fun processArchiveFile(
-      archive: File,
-      stream: InputStreamWrapper,
-      entry: ArchiveEntry,
-      parentFilePath: FilePath,
-      filePathCache: MutableMap<String, FilePath>
-   ) {
-      val pathAndFilename = entry.name.replace('\\', '/')
-      val filename = pathAndFilename.substringAfterLast("/")
-      val pathWithinArchive = pathAndFilename.substringBeforeLast("/", "")
-      val path = parentFilePath.path + archive.name + "/" + pathWithinArchive
-      val filePath: FilePath
-      if (path.isNotEmpty()) {
-         if (filePathCache.containsKey(path)) {
-            filePath = filePathCache[path]!!
-         } else {
-            filePath = pl.getOrInsertFullFilePath(File(path))
-            filePathCache[path] = filePath
-            //logger.info("{}", File("$archive/$pathWithinArchive"))
-         }
-      } else {
-         filePath = pl.getFilePath(Queries.filePathRootId)
-      }
-      val modified = entry.lastModifiedDate.toInstant()
-
-      return processFileStream(
-         filePath,
-         filename,
-         myLazy { stream },
-         modified,
-         modified,
-         entry.size,
-         hidden = false,
-         inArchive = true,
-         archiveName = archive.name,
-         archiveRead = true,
-         alreadyWithinReadSemaphore = true
-      )
-   }
-
-   private fun isAlwaysCheckHash(filename: String): Boolean = Config.INST.alwaysCheckHashOnIndexForFilesSuffix.any { filename.endsWith(it) }
+   private fun isAlwaysCheckHash(filename: String) = Config.INST.alwaysCheckHashOnIndexForFilesSuffix.any { filename.endsWith(it) }
 
    private fun isArchiveToProcess(file: File) = indexArchiveContents && file.extension.lowercase() in Config.INST.archiveExtensions
 
