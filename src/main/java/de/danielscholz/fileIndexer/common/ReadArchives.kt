@@ -14,9 +14,12 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
 
-fun processArchive(archive: File,
-                   processEntry: (InputStreamWrapper, ArchiveEntry) -> Unit,
-                   processFailure: (Exception) -> Unit): Boolean {
+@Suppress("DuplicatedCode")
+fun processArchive(
+   archive: File,
+   processEntry: (InputStreamWrapper, ArchiveEntry) -> Unit,
+   processFailure: (Exception) -> Unit
+): Boolean {
 
    fun processArchiveStream(archiveInputStream: ArchiveInputStream) {
       while (true) {
@@ -62,11 +65,12 @@ fun processArchive(archive: File,
                val entry = sevenZFile.nextEntry ?: break
                if (!entry.isDirectory) {
                   processEntry(
-                        object : InputStreamWrapper {
-                           override fun read(b: ByteArray): Int = sevenZFile.read(b)
-                           override fun close() {}
-                        },
-                        entry)
+                     object : InputStreamWrapper {
+                        override fun read(b: ByteArray): Int = sevenZFile.read(b)
+                        override fun close() {}
+                     },
+                     entry
+                  )
                }
                testIfCancel()
             }

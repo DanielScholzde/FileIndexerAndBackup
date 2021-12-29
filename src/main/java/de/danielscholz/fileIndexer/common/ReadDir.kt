@@ -16,8 +16,8 @@ private val logger = LoggerFactory.getLogger("ReadDir")
 
 
 fun readDir(dir: File, caseSensitive: Boolean, includePaths: List<Path> = listOf()): FolderResult {
-   val files: MutableList<File> = mutableListOf()
-   val folders: MutableList<Pair<File, List<Path>>> = mutableListOf()
+   val files = mutableListOf<File>()
+   val folders = mutableListOf<Pair<File, List<Path>>>()
    val filesAndDirs = dir.listFiles()
    if (filesAndDirs != null) {
       for (fileEntry in filesAndDirs.sortedBy { it.name.lowercase() }) {

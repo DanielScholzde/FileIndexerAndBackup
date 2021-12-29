@@ -18,7 +18,6 @@ public class InfopanelSwing {
     private JLabel duration = new JLabel(EMPTY);
     private JLabel remainingDuration = new JLabel(EMPTY);
     private JLabel progressTotal = new JLabel(EMPTY);
-    private JLabel progressDirectory = new JLabel(EMPTY);
     private JLabel newIndexedData = new JLabel(EMPTY);
     private JLabel fastMode = new JLabel(EMPTY);
     private JLabel processedMbPerSecond = new JLabel(EMPTY);
@@ -37,8 +36,6 @@ public class InfopanelSwing {
         frame.add(duration);
         frame.add(new JLabel("Remaining time: "));
         frame.add(remainingDuration);
-        frame.add(new JLabel("Progress directory: "));
-        frame.add(progressDirectory);
         frame.add(new JLabel("Progress total: "));
         frame.add(progressTotal);
         frame.add(new JLabel("FastMode statistic: "));
@@ -78,11 +75,6 @@ public class InfopanelSwing {
     public static void setProgressTotal(String text) {
         if (INSTANCE != null)
             INSTANCE.progressTotal.setText(text);
-    }
-
-    public static void setProgressDirectory(String text) {
-        if (INSTANCE != null)
-            INSTANCE.progressDirectory.setText(text);
     }
 
     public static void setFastModeData(String text) {

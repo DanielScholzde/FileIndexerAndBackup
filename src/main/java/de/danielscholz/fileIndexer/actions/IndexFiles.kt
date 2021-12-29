@@ -8,10 +8,8 @@ import de.danielscholz.fileIndexer.img.ImgUtils.extractExifOriginalDateAndDimens
 import de.danielscholz.fileIndexer.img.ImgUtils.extractThumbnail
 import de.danielscholz.fileIndexer.img.ImgUtils.scaleAndSaveImg
 import de.danielscholz.fileIndexer.persistence.*
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import org.apache.commons.compress.archivers.ArchiveEntry
@@ -30,15 +28,17 @@ import kotlin.math.absoluteValue
  * Indexes all files within the directory dir.
  * Files in archives are indexed if indexArchiveContents is true.
  */
-class IndexFiles(private val dir: File,
-                 private val includedPaths: List<String>,
-                 private val lastIndexDir: File?,
-                 private val mediumDescription: String?,
-                 private val mediumSerial: String?,
-                 private val indexArchiveContents: Boolean,
-                 private val updateHardlinksInLastIndex: Boolean,
-                 private val readConfig: ReadConfig,
-                 private val pl: PersistenceLayer) {
+class IndexFiles(
+   private val dir: File,
+   private val includedPaths: List<String>,
+   private val lastIndexDir: File?,
+   private val mediumDescription: String?,
+   private val mediumSerial: String?,
+   private val indexArchiveContents: Boolean,
+   private val updateHardlinksInLastIndex: Boolean,
+   private val readConfig: ReadConfig,
+   private val pl: PersistenceLayer
+) {
 
    class ReadConfig(val maxParallelReadsGeneral: Int, val maxParallelReadsSmallFilesFactor: Int, val smallFilesSizeThreshold: Int) {
       @Suppress("MemberVisibilityCanBePrivate")
@@ -56,15 +56,16 @@ class IndexFiles(private val dir: File,
 
    private val lastIndexedFileLocationsByKey = mutableListMultimapOf<Key, FileLocation>()
 
-   private var indexRun: IndexRun? = null
+   private lateinit var indexRun: IndexRun
    private val indexedFileLocationIdsByKey = syncronizedMutableSetMultimapOf<Key, Long>() // to recognize hardlinks
    private var maxReferenceInode = 0L
    private var caseSensitiveFS = false
-   private val numThreads = Runtime.getRuntime().availableProcessors()
+   private val numThreads = if (Config.INST.allowMultithreading) Runtime.getRuntime().availableProcessors() else 1
 
    private val stat = IndexFilesStats { getParallelReads() }
 
-   private var channel = Channel<suspend () -> Unit>()
+   private var channel = Channel<suspend () -> Unit>() // size=0 --> RENDEZVOUS
+
 
    fun run(): Pair<IndexRun, Int> {
       // reads the number of files, size of all files within the directory and determines excludedFilesUsed / excludedPathsUsed
@@ -86,25 +87,26 @@ class IndexFiles(private val dir: File,
          val fileStore = Files.getFileStore(dir.toPath())
 
          indexRun = pl.insertIntoIndexRun(
-               IndexRun(0,
-                        pl,
-                        filePath.id,
-                        pathWithoutPrefix,
-                        calcFilePathPrefix(dir),
-                        includedPaths.convertToSortedStr(),
-                        dirInfos.excluded.excludedPathsUsed.convertToSortedStr(),
-                        dirInfos.excluded.excludedFilesUsed.convertToSortedStr(),
-                        mediumDescription,
-                        mediumSerialDetermined,
-                        dirInfos.caseSensitive,
-                        Instant.now(),
-                        false,
-                        false,
-                        if (Config.INST.createHashOnlyForFirstMb) 1 else null,
-                        fileStore.totalSpace,
-                        fileStore.usableSpace,
-                        true // set to false at the end of a successful index process
-               )
+            IndexRun(
+               0,
+               pl,
+               filePath.id,
+               pathWithoutPrefix,
+               calcFilePathPrefix(dir),
+               includedPaths.convertToSortedStr(),
+               dirInfos.excluded.excludedPathsUsed.convertToSortedStr(),
+               dirInfos.excluded.excludedFilesUsed.convertToSortedStr(),
+               mediumDescription,
+               mediumSerialDetermined,
+               dirInfos.caseSensitive,
+               Instant.now(),
+               false,
+               false,
+               if (Config.INST.createHashOnlyForFirstMb) 1 else null,
+               fileStore.totalSpace,
+               fileStore.usableSpace,
+               true // set to false at the end of a successful index process
+            )
          )
 
          try {
@@ -113,10 +115,27 @@ class IndexFiles(private val dir: File,
                stat.startRefresh()
             }
 
-            createIndex(dir, null, includedPaths.map { Path(it, it) })
+            runBlocking {
+               supervisorScope {
+                  withContext(Dispatchers.IO) {
 
-            indexRun!!.failureOccurred = false
-            pl.updateIndexRun(indexRun!!)
+                     repeat(times = min(numThreads, Config.INST.maxThreads)) {
+                        launch {
+                           for (processFileCallbackNoExc in channel) {
+                              processFileCallbackNoExc()
+                           }
+                        }
+                     }
+
+                     processFolderNoExc(dir, null, includedPaths.map { Path(it, it) })
+
+                     channel.close()
+                  }
+               }
+            }
+
+            indexRun.failureOccurred = false
+            pl.updateIndexRun(indexRun)
          } finally {
             pl.clearFilePathCache()
             if (Config.INST.progressWindow) {
@@ -128,11 +147,13 @@ class IndexFiles(private val dir: File,
 
       Global.echoAndResetStat()
 
-      return Pair(indexRun!!, stat.indexedFilesCount.get())
+      return indexRun to stat.indexedFilesCount.get()
    }
 
    // todo consider param excluded
    private fun loadAlreadyIndexedFiles(dir: File, excluded: Excluded, mediumSerial: String?) {
+      data class FLKey(val filePathId: Long, val filename: String)
+
       val pathsToLoad = mutableListOf<IndexRunFilePathResult>()
       // load all indexed files from newest successful created indexRun layer
       val newestPath = pl.getNewestPath(mediumSerial, dir, true)
@@ -154,88 +175,70 @@ class IndexFiles(private val dir: File,
       }
 
       for (fileLocation in fileLocationMap.values) {
-         lastIndexedFileLocationsByKey[Key(fileLocation.fileContent?.fileSize ?: 0L,
-                                           fileLocation.modified.toEpochMilli())] = fileLocation
+         val key = Key(fileLocation.fileContent?.fileSize ?: 0L, fileLocation.modified.toEpochMilli())
+         lastIndexedFileLocationsByKey[key] = fileLocation
       }
    }
 
-   data class FLKey(val filePathId: Long, val filename: String)
 
-   private fun createIndex(sourceDir: File, parentFilePath: FilePath?, includedPaths: List<Path>): FilePath {
-      stat.filesDir = 0
-      stat.filesProcessedDir.reset()
+   private suspend fun processFolderNoExc(sourceDir: File, parentFilePath: FilePath?, includedPaths: List<Path>): FilePath {
       logger.info("index: {}", sourceDir)
 
       val filePath = if (parentFilePath != null) {
-         pl.searchOrInsertFilePath(FilePath(0,
-                                            pl,
-                                            parentFilePath.id,
-                                            parentFilePath.path + sourceDir.name + "/",
-                                            sourceDir.name,
-                                            parentFilePath.depth + 1))
+         pl.searchOrInsertFilePath(
+            FilePath(
+               0,
+               pl,
+               parentFilePath.id,
+               parentFilePath.path + sourceDir.name + "/",
+               sourceDir.name,
+               parentFilePath.depth + 1
+            )
+         )
       } else {
          pl.getFilePath(Queries.filePathRootId)
       }
 
       stat.currentProcessedFile = "Read directory $sourceDir"
       val (folders, files) = readDir(sourceDir, caseSensitiveFS, includedPaths)
-      stat.filesDir = files.size
 
-      fun processFiles(files: List<File>) = runBlocking {
-         if (files.isEmpty()) {
-            return@runBlocking
-         }
-
-         if (Config.INST.allowMultithreading && files.size > 1) {
-            testIfCancel(pl.db)
-
-            channel = Channel()
-            launch(Dispatchers.Unconfined) {
-               files.map { file -> file to file.length() } // read file size for every file
-                  .sortedByDescending { it.second } // order by file size descending to process bigger files first
-                  .forEach { (file, _) ->
-                     if (!Global.cancel) {
-                        channel.send { processFileTopLevel(file, filePath) }
-                     }
-                  }
-               channel.close()
-            }
-
-            repeat(min(numThreads, Config.INST.maxThreads)) {
-               launch(Dispatchers.Default) {
-                  for (fileProcessor in channel) {
-                     fileProcessor()
-                  }
-               }
-            }
-         } else {
-            launch(Dispatchers.Unconfined) {
-               for (file in files) {
-                  testIfCancel(pl.db)
-
-                  processFileTopLevel(file, filePath)
-               }
-            }
-         }
-      }
-
-      processFiles(files.filter { isArchiveToProcess(it) }) // process archives first
-      processFiles(files.filter { !isArchiveToProcess(it) })
+      sendFilesOfFolderToChannelNoExc(files, filePath)
 
       for (folder in folders) {
-         createIndex(folder.first, filePath, folder.second)
+         processFolderNoExc(folder.first, filePath, folder.second)
       }
 
       return filePath
    }
 
-   private suspend fun processFileTopLevel(file: File, filePath: FilePath) {
+   private suspend fun sendFilesOfFolderToChannelNoExc(files: List<File>, filePath: FilePath) {
+      if (files.isEmpty()) {
+         return
+      }
 
-      if (isArchiveToProcess(file)) {
-         readSemaphore(file.name, file.length(), false, false) {
-            val filePathCache = mutableMapOf<String, FilePath>()
+      val sortedFiles = files
+         .map { file -> file to file.length() } // read file size for every file
+         .sortedByDescending { it.second } // order by file size descending to process bigger files first
 
-            val archiveRead = processArchiveSuspending(
+      for ((file, _) in sortedFiles) {
+         if (testIfCancelNoException(pl.db)) {
+            return
+         }
+
+         val fileProcessor: suspend () -> Unit = {
+            processFileTopLevelNoExc(file, filePath)
+         }
+         channel.send(fileProcessor)
+      }
+   }
+
+   private suspend fun processFileTopLevelNoExc(file: File, filePath: FilePath) {
+      try {
+         if (isArchiveToProcess(file)) {
+            readSemaphore(file.name, file.length(), false, false) {
+               val filePathCache = mutableMapOf<String, FilePath>()
+
+               val archiveRead = processArchiveSuspending(
                   file,
                   { stream, archiveEntry ->
                      processArchiveFile(file, stream, archiveEntry, filePath, filePathCache)
@@ -246,37 +249,45 @@ class IndexFiles(private val dir: File,
                      logger.error(msg)
                   })
 
-            processFile(file, filePath, archiveRead, true)
+               processNormalFile(file, filePath, archiveRead, true)
+            }
+         } else {
+            processNormalFile(file, filePath, false, false)
          }
-      } else {
-         processFile(file, filePath, false, false)
+      } catch (e: CancelException) {
+         // todo
+      } catch (e: Exception) {
+         // todo
       }
-
-      stat.filesProcessedDir++
    }
 
-   private suspend fun processFile(file: File, filePath: FilePath, archiveRead: Boolean, alreadyWithinReadSemaphore: Boolean) {
+   private suspend fun processNormalFile(file: File, filePath: FilePath, archiveRead: Boolean, alreadyWithinReadSemaphore: Boolean) {
       try {
-         val attributes = Files.readAttributes(file.toPath(),
-                                               BasicFileAttributes::class.java,
-                                               LinkOption.NOFOLLOW_LINKS)
+         @Suppress("BlockingMethodInNonBlockingContext")
+         val attributes = Files.readAttributes(
+            file.toPath(),
+            BasicFileAttributes::class.java,
+            LinkOption.NOFOLLOW_LINKS
+         )
 
          val fileSize = attributes.size()
 
          myLazy {
             InputStreamWrapperImpl(BufferedInputStream(FileInputStream(file)))
          }.tryWith { lazyInputStream ->
-            processFileStream(filePath,
-                              file.name,
-                              lazyInputStream,
-                              attributes.creationTime().toInstant(),
-                              attributes.lastModifiedTime().toInstant(),
-                              fileSize,
-                              file.isHidden,
-                              false,
-                              null,
-                              archiveRead,
-                              alreadyWithinReadSemaphore).handleException()
+            processFileStream(
+               filePath,
+               file.name,
+               lazyInputStream,
+               attributes.creationTime().toInstant(),
+               attributes.lastModifiedTime().toInstant(),
+               fileSize,
+               file.isHidden,
+               false,
+               null,
+               archiveRead,
+               alreadyWithinReadSemaphore
+            )
          }
       } catch (e: IOException) {
          val msg = "ERROR: $file: File could not be read. ${e.javaClass.simpleName}: ${e.message}"
@@ -285,71 +296,76 @@ class IndexFiles(private val dir: File,
       }
    }
 
-   private suspend fun processFileStream(filePath: FilePath,
-                                         filename: String,
-                                         lazyInputStream: Lazy<InputStreamWrapper>,
-                                         created: Instant,
-                                         modified: Instant,
-                                         fileSize: Long,
-                                         hidden: Boolean,
-                                         inArchive: Boolean,
-                                         archiveName: String?,
-                                         archiveRead: Boolean,
-                                         alreadyWithinReadSemaphore: Boolean): NoResult {
-      return synchronized(filename, fileSize) {
-         noResult {
-            logger.trace("START process: {}, file size: {} {}", filename, fileSize, inArchive.ifTrue("(archive: $archiveName)", "")) // todo
+   private suspend fun processFileStream(
+      filePath: FilePath,
+      filename: String,
+      lazyInputStream: Lazy<InputStreamWrapper>,
+      created: Instant,
+      modified: Instant,
+      fileSize: Long,
+      hidden: Boolean,
+      inArchive: Boolean,
+      archiveName: String?,
+      archiveRead: Boolean,
+      alreadyWithinReadSemaphore: Boolean
+   ) {
+      synchronized(filename, fileSize) {
+         logger.trace("START process: {}, file size: {} {}", filename, fileSize, inArchive.ifTrue("(archive: $archiveName)", "")) // todo
 
-            var fileContentId: Long? = null
-            var referenceInode: Long? = null
+         var fileContentId: Long? = null
+         var referenceInode: Long? = null
 
-            if (fileSize > 0) {
-               val result = createFileContent(lazyInputStream,
-                                              fileSize,
-                                              modified,
-                                              filename,
-                                              filePath,
-                                              inArchive,
-                                              archiveName,
-                                              alreadyWithinReadSemaphore).get()
-               fileContentId = result.first
-               referenceInode = result.second
-            }
-
-            val fileLocation = pl.insertIntoFileLocation(
-                  FileLocation(0,
-                               pl,
-                               fileContentId,
-                               filePath.id,
-                               indexRun!!.id,
-                               filename,
-                               filename.getFileExtension(),
-                               created,
-                               modified,
-                               hidden,
-                               inArchive,
-                               referenceInode))
-
-            if (fileSize > 0 && !inArchive) {
-               addAlreadyIndexedFile(fileLocation, fileSize, modified)
-            }
-
-            Global.stat.indexedFilesCount++
-            Global.stat.indexedFilesSize += fileSize
-            stat.indexedFilesCount++
-            if (inArchive) {
-               stat.indexedFilesSize += fileSize
-            } else {
-               if (!archiveRead) {
-                  stat.indexedFilesSize += fileSize
-               }
-
-               stat.indexedFilesCountNoArchive++
-               stat.indexedFilesSizeNoArchive += fileSize
-            }
-
-            logger.trace("END   process: $filename, file size: $fileSize")
+         if (fileSize > 0) {
+            val result = createFileContent(
+               lazyInputStream,
+               fileSize,
+               modified,
+               filename,
+               filePath,
+               inArchive,
+               archiveName,
+               alreadyWithinReadSemaphore
+            )
+            fileContentId = result.first
+            referenceInode = result.second
          }
+
+         val fileLocation = pl.insertIntoFileLocation(
+            FileLocation(
+               0,
+               pl,
+               fileContentId,
+               filePath.id,
+               indexRun.id,
+               filename,
+               filename.getFileExtension(),
+               created,
+               modified,
+               hidden,
+               inArchive,
+               referenceInode
+            )
+         )
+
+         if (fileSize > 0 && !inArchive) {
+            addAlreadyIndexedFile(fileLocation, fileSize, modified)
+         }
+
+         Global.stat.indexedFilesCount++
+         Global.stat.indexedFilesSize += fileSize
+         stat.indexedFilesCount++
+         if (inArchive) {
+            stat.indexedFilesSize += fileSize
+         } else {
+            if (!archiveRead) {
+               stat.indexedFilesSize += fileSize
+            }
+
+            stat.indexedFilesCountNoArchive++
+            stat.indexedFilesSizeNoArchive += fileSize
+         }
+
+         logger.trace("END   process: $filename, file size: $fileSize")
       }
    }
 
@@ -360,136 +376,140 @@ class IndexFiles(private val dir: File,
     *
     * Wenn die Datei ein Bild ist, wird ein Thumbnail erstellt und ein FileMeta-Eintrag erzeugt.
     */
-   private suspend fun createFileContent(lazyInputStream: Lazy<InputStreamWrapper>,
-                                         fileSize: Long,
-                                         modified: Instant,
-                                         filename: String,
-                                         filePath: FilePath,
-                                         inArchive: Boolean,
-                                         archiveName: String?,
-                                         alreadyWithinReadSemaphore: Boolean): Result<Pair<Long, Long?>> {
-      return result {
-         if (!inArchive) {
-            var fileContentId: Long? = null
-            var referenceInode: Long? = null
-            var minOneOtherFileLocationWithSameInode = false
-            val foundFileLocations = searchInAlreadyIndexedFilesForHardlinks(filePath, filename, fileSize, modified)
-            if (foundFileLocations.isNotEmpty()) {
-               val minExistingRefInode = foundFileLocations.mapNotNull { it.referenceInode }.minOfOrNull { it }
-               for (fileLocation in foundFileLocations) {
-                  // update only the current indexRun layer except it is explicitly demanded
-                  if (updateHardlinksInLastIndex || fileLocation.indexRunId == indexRun!!.id) {
-                     if (referenceInode == null) {
-                        referenceInode = minExistingRefInode ?: ++maxReferenceInode
-                     }
-                     if (fileLocation.referenceInode != referenceInode) {
-                        fileLocation.referenceInode = referenceInode
-                        pl.updateFileLocation(fileLocation)
-                     }
-                     minOneOtherFileLocationWithSameInode = true
+   private suspend fun createFileContent(
+      lazyInputStream: Lazy<InputStreamWrapper>,
+      fileSize: Long,
+      modified: Instant,
+      filename: String,
+      filePath: FilePath,
+      inArchive: Boolean,
+      archiveName: String?,
+      alreadyWithinReadSemaphore: Boolean
+   ): Pair<Long, Long?> {
+
+      if (!inArchive) {
+         var fileContentId: Long? = null
+         var referenceInode: Long? = null
+         var minOneOtherFileLocationWithSameInode = false
+         val foundFileLocations = searchInAlreadyIndexedFilesForHardlinks(filePath, filename, fileSize, modified)
+         if (foundFileLocations.isNotEmpty()) {
+            val minExistingRefInode = foundFileLocations.mapNotNull { it.referenceInode }.minOfOrNull { it }
+            for (fileLocation in foundFileLocations) {
+               // update only the current indexRun layer except it is explicitly demanded
+               if (updateHardlinksInLastIndex || fileLocation.indexRunId == indexRun.id) {
+                  if (referenceInode == null) {
+                     referenceInode = minExistingRefInode ?: ++maxReferenceInode
                   }
-                  // all fileContentId's should be the same
-                  if (fileContentId != null && fileContentId != fileLocation.fileContentId) throw IllegalStateException()
-                  fileContentId = fileLocation.fileContentId
+                  if (fileLocation.referenceInode != referenceInode) {
+                     fileLocation.referenceInode = referenceInode
+                     pl.updateFileLocation(fileLocation)
+                  }
+                  minOneOtherFileLocationWithSameInode = true
                }
-            }
-            if (fileContentId != null) {
-               return@result fileContentId to minOneOtherFileLocationWithSameInode.ifTrue(referenceInode, null)
-            }
-         }
-
-         val extension = filename.getFileExtension()?.lowercase()
-         val lazyImgContent = if (extension in Config.INST.imageExtensions && fileSize < 50_000_000) {
-            myLazy { ByteArray(fileSize.toInt()) }
-         } else {
-            null
-         }
-
-         val checksumCreator = myLazy {
-            ChecksumCreator(lazyInputStream.value, fileSize, null, lazyImgContent?.value) // todo file?
-         }
-         val checksumFromBeginTemp = myLazy {
-            checksumCreator.value.getChecksumFromBeginTemp().joinToString(",")
-         }
-
-         // if fastMode is active, the calculation of the complete hash may be omitted
-         if (Config.INST.fastMode && !isAlwaysCheckHash(filename)) {
-            for (lastIndexedFileLocation in lastIndexedFileLocationsByKey[Key(fileSize, modified.toEpochMilli())]) {
-               if (lastIndexedFileLocation.filename == filename
-                   && compareFilePaths(lastIndexedFileLocation, filePath)
-                   && (Config.INST.ignoreHashInFastMode
-                       || lastIndexedFileLocation.fileContent!!.hashBegin.startsWith(
-                           readSemaphore(filename, fileSize, inArchive, alreadyWithinReadSemaphore) {
-                              result {
-                                 stat.currentProcessedFile = if (archiveName != null) "$archiveName / $filename" else filename
-                                 checksumFromBeginTemp.value
-                              }
-                           }.get()))) {
-
-                  logger.trace("FAST_MODE: already indexed file found: $filename")
-                  Global.stat.fastModeHitCount++
-
-                  stat.currentProcessedFile = filename
-
-                  return@result lastIndexedFileLocation.fileContent!!.id to null
-               }
+               // all fileContentId's should be the same
+               if (fileContentId != null && fileContentId != fileLocation.fileContentId) throw IllegalStateException()
+               fileContentId = fileLocation.fileContentId
             }
          }
-
-         Global.stat.notFastModeHitCount++
-
-         // calculate hash, expensive!!
-         val checksum = readSemaphore(filename, fileSize, inArchive, alreadyWithinReadSemaphore) {
-            result {
-               stat.currentProcessedFile = if (archiveName != null) "$archiveName / $filename" else filename
-               checksumCreator.value.calcChecksum()
-            }
-         }.get()
-
-         // query database for a matching fileContent with this hash
-         var fileContent = pl.db.dbQueryUniqueNullable(Queries.fileContent1, listOf(checksum.sha1, fileSize)) {
-            pl.extractFileContent(it)
+         if (fileContentId != null) {
+            return fileContentId to minOneOtherFileLocationWithSameInode.ifTrue(referenceInode, null)
          }
-
-         if (fileContent != null) {
-            // entry found; return this entry
-            return@result fileContent.id to null
-         }
-
-         // otherwise create a new entry
-         fileContent = pl.insertIntoFileContent(
-               FileContent(0,
-                           pl,
-                           fileSize,
-                           checksum.sha1,
-                           checksum.sha1ChunksFromBeginning.joinToString(","),
-                           checksum.sha1ChunksFromEnd.joinToString(",")))
-
-         if (lazyImgContent != null && lazyImgContent.isInitialized()) {
-            try {
-               val imgAttr = extractExifOriginalDateAndDimension(lazyImgContent.value, Config.INST.timeZone)
-               if (imgAttr.originalDate != null || imgAttr.width != null) {
-                  pl.insertIntoFileMeta(FileMeta(0, pl, fileContent.id, imgAttr.width, imgAttr.height, imgAttr.originalDate))
-               }
-               //logger.info("$filename: ${imgAttr.width}x${imgAttr.height} ${imgAttr.originalDate?.formatDE()}")
-            } catch (e: Exception) {
-               logger.warn("WARN: $filePath/$filename: EXIF infos could not be read. {}: {}", e.javaClass.simpleName, e.message)
-            }
-            if (Config.INST.createThumbnails) {
-               saveThumbnail(extension, lazyImgContent.value, fileContent.id)
-            }
-         }
-
-         Global.stat.newIndexedFilesCount++
-         Global.stat.newIndexedFilesSize += fileSize
-
-         return@result fileContent.id to null
       }
+
+      val extension = filename.getFileExtension()?.lowercase()
+      val lazyImgContent = if (extension in Config.INST.imageExtensions && fileSize < 50_000_000) {
+         myLazy { ByteArray(fileSize.toInt()) }
+      } else {
+         null
+      }
+
+      val checksumCreator = myLazy {
+         ChecksumCreator(lazyInputStream.value, fileSize, null, lazyImgContent?.value) // todo file?
+      }
+      val checksumFromBeginTemp = myLazy {
+         checksumCreator.value.getChecksumFromBeginTemp().joinToString(",")
+      }
+
+      // if fastMode is active, the calculation of the complete hash may be omitted
+      if (Config.INST.fastMode && !isAlwaysCheckHash(filename)) {
+         for (lastIndexedFileLocation in lastIndexedFileLocationsByKey[Key(fileSize, modified.toEpochMilli())]) {
+            if (lastIndexedFileLocation.filename == filename
+               && compareFilePaths(lastIndexedFileLocation, filePath)
+               && (Config.INST.ignoreHashInFastMode
+                     || lastIndexedFileLocation.fileContent!!.hashBegin.startsWith(
+                  readSemaphore(filename, fileSize, inArchive, alreadyWithinReadSemaphore) {
+                     stat.currentProcessedFile = if (archiveName != null) "$archiveName / $filename" else filename
+                     checksumFromBeginTemp.value
+                  }
+               ))
+            ) {
+
+               logger.trace("FAST_MODE: already indexed file found: $filename")
+               Global.stat.fastModeHitCount++
+
+               stat.currentProcessedFile = filename
+
+               return lastIndexedFileLocation.fileContent!!.id to null
+            }
+         }
+      }
+
+      Global.stat.notFastModeHitCount++
+
+      // calculate hash, expensive!
+      val checksum = readSemaphore(filename, fileSize, inArchive, alreadyWithinReadSemaphore) {
+         stat.currentProcessedFile = if (archiveName != null) "$archiveName / $filename" else filename
+         checksumCreator.value.calcChecksum()
+      }
+
+      // query database for a matching fileContent with this hash
+      var fileContent = pl.db.dbQueryUniqueNullable(Queries.fileContent1, listOf(checksum.sha1, fileSize)) {
+         pl.extractFileContent(it)
+      }
+
+      if (fileContent != null) {
+         // entry found; return this entry
+         return fileContent.id to null
+      }
+
+      // otherwise create a new entry
+      fileContent = pl.insertIntoFileContent(
+         FileContent(
+            0,
+            pl,
+            fileSize,
+            checksum.sha1,
+            checksum.sha1ChunksFromBeginning.joinToString(","),
+            checksum.sha1ChunksFromEnd.joinToString(",")
+         )
+      )
+
+      if (lazyImgContent != null && lazyImgContent.isInitialized()) {
+         try {
+            val imgAttr = extractExifOriginalDateAndDimension(lazyImgContent.value, Config.INST.timeZone)
+            if (imgAttr.originalDate != null || imgAttr.width != null) {
+               pl.insertIntoFileMeta(FileMeta(0, pl, fileContent.id, imgAttr.width, imgAttr.height, imgAttr.originalDate))
+            }
+            //logger.info("$filename: ${imgAttr.width}x${imgAttr.height} ${imgAttr.originalDate?.formatDE()}")
+         } catch (e: Exception) {
+            logger.warn("WARN: $filePath/$filename: EXIF infos could not be read. {}: {}", e.javaClass.simpleName, e.message)
+         }
+         if (Config.INST.createThumbnails) {
+            saveThumbnail(extension, lazyImgContent.value, fileContent.id)
+         }
+      }
+
+      Global.stat.newIndexedFilesCount++
+      Global.stat.newIndexedFilesSize += fileSize
+
+      return fileContent.id to null
    }
 
-   private fun addAlreadyIndexedFile(fileLocation: FileLocation,
-                                     fileSize: Long,
-                                     modified: Instant) {
+   private fun addAlreadyIndexedFile(
+      fileLocation: FileLocation,
+      fileSize: Long,
+      modified: Instant
+   ) {
       indexedFileLocationIdsByKey[Key(fileSize, modified.toEpochMilli())] = fileLocation.id
    }
 
@@ -497,10 +517,12 @@ class IndexFiles(private val dir: File,
     * Detection of hardlinks within the same indexRun layer or the layer before.
     * Returns all fileLocations whose file is a hard link to the specified file.
     */
-   private fun searchInAlreadyIndexedFilesForHardlinks(filePath: FilePath,
-                                                       filename: String,
-                                                       fileSize: Long,
-                                                       modified: Instant): List<FileLocation> {
+   private fun searchInAlreadyIndexedFilesForHardlinks(
+      filePath: FilePath,
+      filename: String,
+      fileSize: Long,
+      modified: Instant
+   ): List<FileLocation> {
 
       val potentiallySameFileLocations: List<FileLocation> = lastIndexedFileLocationsByKey[Key(fileSize, modified.toEpochMilli())]
       val potentiallySameFileLocationIds: Set<Long> = indexedFileLocationIdsByKey[Key(fileSize, modified.toEpochMilli())]
@@ -512,10 +534,12 @@ class IndexFiles(private val dir: File,
       val currentFile = File(getCurrFullPath(filePath) + filename).toPath()
 
       fun isSameFile(potentiallySameFileLocation: FileLocation): Boolean {
-         val file = File(potentiallySameFileLocation.indexRun!!.pathPrefix
-                         + potentiallySameFileLocation.indexRun!!.path
-                         + pl.getFilePath(potentiallySameFileLocation.filePathId).path.removePrefix("/")
-                         + potentiallySameFileLocation.filename)
+         val file = File(
+            potentiallySameFileLocation.indexRun!!.pathPrefix
+                  + potentiallySameFileLocation.indexRun!!.path
+                  + pl.getFilePath(potentiallySameFileLocation.filePathId).path.removePrefix("/")
+                  + potentiallySameFileLocation.filename
+         )
 
          if (!file.exists()) return false // if file is deleted or renamed meanwhile
 
@@ -525,12 +549,12 @@ class IndexFiles(private val dir: File,
       }
 
       return potentiallySameFileLocations.asSequence()
-                .filter { potentiallySameFileLocation -> isSameFile(potentiallySameFileLocation) }
-                .toList() +
-             potentiallySameFileLocationIds.asSequence()
-                .map { fileLocationId -> pl.getFileLocation(fileLocationId) }
-                .filter { potentiallySameFileLocation -> isSameFile(potentiallySameFileLocation) }
-                .toList()
+         .filter { potentiallySameFileLocation -> isSameFile(potentiallySameFileLocation) }
+         .toList() +
+            potentiallySameFileLocationIds.asSequence()
+               .map { fileLocationId -> pl.getFileLocation(fileLocationId) }
+               .filter { potentiallySameFileLocation -> isSameFile(potentiallySameFileLocation) }
+               .toList()
    }
 
    private fun saveThumbnail(ext: String?, imgContent: ByteArray, fileContentId: Long) {
@@ -590,19 +614,21 @@ class IndexFiles(private val dir: File,
    }
 
    private fun getCurrFullPathWithoutPrefix(filePath: FilePath) =
-         indexRun!!.path + filePath.path.removePrefix("/")
+      indexRun.path + filePath.path.removePrefix("/")
 
    private fun getCurrFullPath(filePath: FilePath) =
-         indexRun!!.pathPrefix + getCurrFullPathWithoutPrefix(filePath)
+      indexRun.pathPrefix + getCurrFullPathWithoutPrefix(filePath)
 
    private fun getFullPathWithoutPrefix(fileLocation: FileLocation) =
-         fileLocation.indexRun!!.path + pl.getFilePath(fileLocation.filePathId).path.removePrefix("/")
+      fileLocation.indexRun!!.path + pl.getFilePath(fileLocation.filePathId).path.removePrefix("/")
 
-   private suspend fun processArchiveFile(archive: File,
-                                          stream: InputStreamWrapper,
-                                          entry: ArchiveEntry,
-                                          parentFilePath: FilePath,
-                                          filePathCache: MutableMap<String, FilePath>): NoResult {
+   private suspend fun processArchiveFile(
+      archive: File,
+      stream: InputStreamWrapper,
+      entry: ArchiveEntry,
+      parentFilePath: FilePath,
+      filePathCache: MutableMap<String, FilePath>
+   ) {
       val pathAndFilename = entry.name.replace('\\', '/')
       val filename = pathAndFilename.substringAfterLast("/")
       val pathWithinArchive = pathAndFilename.substringBeforeLast("/", "")
@@ -621,7 +647,19 @@ class IndexFiles(private val dir: File,
       }
       val modified = entry.lastModifiedDate.toInstant()
 
-      return processFileStream(filePath, filename, myLazy { stream }, modified, modified, entry.size, false, true, archive.name, true, true).next()
+      return processFileStream(
+         filePath,
+         filename,
+         myLazy { stream },
+         modified,
+         modified,
+         entry.size,
+         hidden = false,
+         inArchive = true,
+         archiveName = archive.name,
+         archiveRead = true,
+         alreadyWithinReadSemaphore = true
+      )
    }
 
    private fun isAlwaysCheckHash(filename: String): Boolean = Config.INST.alwaysCheckHashOnIndexForFilesSuffix.any { filename.endsWith(it) }
@@ -646,11 +684,13 @@ class IndexFiles(private val dir: File,
    private val readSemaphore = Semaphore(readConfig.maxParallelReadsGeneral)
    private val readSemaphoreSmall = Semaphore(readConfig.maxParallelReadsGeneral * readConfig.maxParallelReadsSmallFilesFactor)
 
-   private suspend fun <T> readSemaphore(filename: String,
-                                         fileSize: Long,
-                                         inArchive: Boolean,
-                                         alreadyWithinReadSemaphore: Boolean,
-                                         block: suspend () -> T): T {
+   private suspend fun <T> readSemaphore(
+      filename: String,
+      fileSize: Long,
+      inArchive: Boolean,
+      alreadyWithinReadSemaphore: Boolean,
+      block: suspend () -> T
+   ): T {
       if (inArchive || alreadyWithinReadSemaphore) {
          return block()
       }
@@ -662,15 +702,15 @@ class IndexFiles(private val dir: File,
 
       suspend fun smallPermit(): T {
          when (readConfig.maxParallelReadsSmallFilesFactor) {
-            1    -> return readSemaphoreSmall.withPermit("Small", filename) {
+            1 -> return readSemaphoreSmall.withPermit("Small", filename) {
                block()
             }
-            2    -> return readSemaphoreSmall.withPermit("Small", filename) {
+            2 -> return readSemaphoreSmall.withPermit("Small", filename) {
                readSemaphoreSmall.withPermit("Small", filename) {
                   block()
                }
             }
-            3    -> return readSemaphoreSmall.withPermit("Small", filename) {
+            3 -> return readSemaphoreSmall.withPermit("Small", filename) {
                readSemaphoreSmall.withPermit("Small", filename) {
                   readSemaphoreSmall.withPermit("Small", filename) {
                      block()

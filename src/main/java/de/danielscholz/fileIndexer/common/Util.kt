@@ -43,6 +43,15 @@ fun testIfCancel(db: Database? = null) {
    }
 }
 
+fun testIfCancelNoException(db: Database? = null): Boolean {
+   if (Global.cancel) {
+      db?.commit() // TODO do commit ?
+      LoggerFactory.getLogger("Main").debug("DB-committed and exit..")
+      return true
+   }
+   return false
+}
+
 fun registerShutdownCallback(exitCallback: () -> Unit) {
    Runtime.getRuntime().addShutdownHook(object : Thread() {
       override fun run() {
@@ -77,7 +86,7 @@ fun calcPathWithoutPrefix(dir: File): String {
 }
 
 fun FileLocation.formatOtherData(): String =
-      " (Größe: " + (this.fileContent?.fileSize ?: 0).formatAsFileSize() + ", geändert: " + this.modified.convertToLocalZone().toStr() + ")"
+   " (Größe: " + (this.fileContent?.fileSize ?: 0).formatAsFileSize() + ", geändert: " + this.modified.convertToLocalZone().toStr() + ")"
 
 
 // darf nicht inlined werden! Wegen "return" innerhalb von function, dann würde das 2. commit() nicht ausgeführt

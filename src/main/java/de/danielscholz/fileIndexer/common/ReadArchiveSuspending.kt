@@ -14,23 +14,24 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
 
-suspend fun processArchiveSuspending(archive: File,
-                                     processEntry: suspend (InputStreamWrapper, ArchiveEntry) -> NoResult,
-                                     processFailure: (Exception) -> Unit): Boolean {
+@Suppress("BlockingMethodInNonBlockingContext", "DuplicatedCode")
+suspend fun processArchiveSuspending(
+   archive: File,
+   processEntry: suspend (InputStreamWrapper, ArchiveEntry) -> Unit,
+   processFailure: (Exception) -> Unit
+): Boolean {
 
-   suspend fun processArchiveStream(archiveInputStream: ArchiveInputStream): NoResult {
-      return noResult {
-         while (true) {
-            val entry = archiveInputStream.nextEntry ?: break
-            if (!archiveInputStream.canReadEntryData(entry)) {
-               processFailure(Exception("Archive entry could not be read: ${entry.name}"))
-               continue
-            }
-            if (!entry.isDirectory) {
-               processEntry(InputStreamWrapperImpl(archiveInputStream), entry).handleException()
-            }
-            testIfCancel()
+   suspend fun processArchiveStream(archiveInputStream: ArchiveInputStream) {
+      while (true) {
+         val entry = archiveInputStream.nextEntry ?: break
+         if (!archiveInputStream.canReadEntryData(entry)) {
+            processFailure(Exception("Archive entry could not be read: ${entry.name}"))
+            continue
          }
+         if (!entry.isDirectory) {
+            processEntry(InputStreamWrapperImpl(archiveInputStream), entry)
+         }
+         testIfCancel()
       }
    }
 
@@ -41,21 +42,24 @@ suspend fun processArchiveSuspending(archive: File,
             for (zipArchiveEntry in zipFile.entriesInPhysicalOrder) {
                if (!zipArchiveEntry.isDirectory) {
                   zipFile.getInputStream(zipArchiveEntry).tryWith { inputStream ->
-                     processEntry(InputStreamWrapperImpl(inputStream), zipArchiveEntry).handleException()
+                     processEntry(InputStreamWrapperImpl(inputStream), zipArchiveEntry)
                   }
+               }
+               if (testIfCancelNoException()) {
+                  break
                }
             }
          }
       } else if (archive.name.lowercase().endsWith(".tar.gz")) {
          BufferedInputStream(FileInputStream(archive)).tryWith { stream ->
             TarArchiveInputStream(GzipCompressorInputStream(stream)).tryWith { archiveInputStream ->
-               processArchiveStream(archiveInputStream).handleException()
+               processArchiveStream(archiveInputStream)
             }
          }
       } else if (!archive.name.lowercase().endsWith(".7z")) {
          BufferedInputStream(FileInputStream(archive)).tryWith { stream ->
             ArchiveStreamFactory().createArchiveInputStream(stream).tryWith { archiveInputStream ->
-               processArchiveStream(archiveInputStream).handleException()
+               processArchiveStream(archiveInputStream)
             }
          }
       } else {
@@ -64,11 +68,12 @@ suspend fun processArchiveSuspending(archive: File,
                val entry = sevenZFile.nextEntry ?: break
                if (!entry.isDirectory) {
                   processEntry(
-                        object : InputStreamWrapper {
-                           override fun read(b: ByteArray): Int = sevenZFile.read(b)
-                           override fun close() {}
-                        },
-                        entry).handleException()
+                     object : InputStreamWrapper {
+                        override fun read(b: ByteArray): Int = sevenZFile.read(b)
+                        override fun close() {}
+                     },
+                     entry
+                  )
                }
                testIfCancel()
             }

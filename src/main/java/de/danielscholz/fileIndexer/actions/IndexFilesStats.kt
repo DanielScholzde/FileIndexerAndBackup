@@ -35,13 +35,6 @@ class IndexFilesStats(private var currentParallelReads: () -> String) {
    var filesSizeAll = 0L
    var filesCountAll = 0
 
-   /** Number of files in current directory */
-   @Volatile
-   var filesDir = 0
-
-   /** Number of already processed files in current directory */
-   var filesProcessedDir = AtomicInteger()
-
    @Volatile
    private var timestampMillisBegin = 0L
 
@@ -78,7 +71,6 @@ class IndexFilesStats(private var currentParallelReads: () -> String) {
       InfopanelSwing.setProgressTotal("${(indexedFilesSize.get() * 100 / filesSizeAll.ifZero(1))}% " +
                                       "[${indexedFilesSize.get().formatAsFileSize()} / ${filesSizeAll.formatAsFileSize()}] " +
                                       "[$indexedFilesCount / $filesCountAll]")
-      InfopanelSwing.setProgressDirectory("" + (filesProcessedDir.get() * 100 / filesDir.ifZero(1)) + "%")
       InfopanelSwing.setDuration(getDuration())
       InfopanelSwing.setRemainingDuration(getEstimatedDuration())
       InfopanelSwing.setFastModeData(getFastModeStats())
