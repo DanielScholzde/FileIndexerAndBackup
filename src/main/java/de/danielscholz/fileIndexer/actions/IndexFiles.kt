@@ -345,7 +345,9 @@ class IndexFiles(
       alreadyWithinReadSemaphore: Boolean
    ) {
       synchronized(filename, fileSize) {
-         logger.trace("START process: {}, file size: {} {}", filename, fileSize, inArchive.ifTrue("(archive: $archiveName)", "")) // todo
+         if (logger.isDebugEnabled) {
+            logger.debug("index: {}, file size: {}{}", filename, fileSize.formatAsFileSize(), inArchive.ifTrue(" (archive: $archiveName)", ""))
+         }
 
          var fileContentId: Long? = null
          var referenceInode: Long? = null
@@ -400,7 +402,9 @@ class IndexFiles(
             stat.indexedFilesSizeNoArchive += fileSize
          }
 
-         logger.trace("END   process: $filename, file size: $fileSize")
+         if (logger.isTraceEnabled) {
+            logger.trace("END index: {}, file size: {}{}", filename, fileSize.formatAsFileSize(), inArchive.ifTrue(" (archive: $archiveName)", ""))
+         }
       }
    }
 

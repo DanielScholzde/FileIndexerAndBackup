@@ -18,8 +18,8 @@ class IndexSubdirTest : BaseTest() {
 
       main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--progressWindow:no", "--updateHardlinksInLastIndex", "$root/testsubindex/")) { pl ->
 
-         assertEquals(5, pl.db.dbQueryUniqueInt("SELECT count(*) FROM FileLocation"))
-         assertEquals(1, pl.db.dbQueryUniqueInt("SELECT count(*) FROM FileContent"))
+         assertEquals(9, pl.db.dbQueryUniqueInt("SELECT count(*) FROM FileLocation"))
+         assertEquals(3, pl.db.dbQueryUniqueInt("SELECT count(*) FROM FileContent"))
 
          // todo further asserts
          val fileLocation1 = pl.getFileLocation(1L)

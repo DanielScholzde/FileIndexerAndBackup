@@ -50,7 +50,8 @@ class Database(val dbFile: String) : Closeable {
                   val count = prepStmt.executeUpdate()
 
                   if (changes++ > Config.INST.maxTransactionSize
-                      || (System.currentTimeMillis() - lastTransactionCommitMillis) / 1000 > Config.INST.maxTransactionDurationSec) {
+                     || (System.currentTimeMillis() - lastTransactionCommitMillis) / 1000 > Config.INST.maxTransactionDurationSec
+                  ) {
                      commit()
                   }
 
@@ -111,10 +112,12 @@ class Database(val dbFile: String) : Closeable {
       return dbQueryUniqueNullable(sql, params, false, resultExtractor)!!
    }
 
-   fun <T> dbQueryUniqueNullable(sql: String,
-                                 params: List<Any> = listOf(),
-                                 noResultAllowed: Boolean = true,
-                                 resultExtractor: (ResultSet) -> T): T? {
+   fun <T> dbQueryUniqueNullable(
+      sql: String,
+      params: List<Any> = listOf(),
+      noResultAllowed: Boolean = true,
+      resultExtractor: (ResultSet) -> T
+   ): T? {
       try {
          return readLock {
             traceQueryTime(sql, params) {
@@ -164,9 +167,11 @@ class Database(val dbFile: String) : Closeable {
       }
    }
 
-   fun <K, V> dbQueryPair(sql: String,
-                          params: List<Any> = listOf(),
-                          resultExtractor: (ResultSet) -> Pair<K, V>): MutableMap<K, V> {
+   fun <K, V> dbQueryPair(
+      sql: String,
+      params: List<Any> = listOf(),
+      resultExtractor: (ResultSet) -> Pair<K, V>
+   ): MutableMap<K, V> {
       try {
          return readLock {
             traceQueryTime(sql, params) {
@@ -229,11 +234,13 @@ class Database(val dbFile: String) : Closeable {
    private fun <T> logSql(result: T, sql: String, params: List<Any?>): T {
       if (result is List<*>) {
          if (result.size > 5) {
-            logger.trace("{}\nParameter: {}\nResult: {}...{} Entries",
-                         sql,
-                         params,
-                         result.subList(0, 5),
-                         result.size)
+            logger.trace(
+               "{}\nParameter: {}\nResult: {}...{} Entries",
+               sql,
+               params,
+               result.subList(0, 5),
+               result.size
+            )
             return result
          }
       }
@@ -251,7 +258,9 @@ class Database(val dbFile: String) : Closeable {
          Global.stat.queryCount++
          if (duration > Global.stat.maxQueryTime.get()) {
             Global.stat.maxQueryTime.set(duration)
-            Global.stat.maxQuerySql = sql + "\n\n" + params.joinToString("\n") { it.toString() }
+            Global.stat.maxQuerySql = "$sql\n   " + params.joinToString(", ") {
+               if (it is String) "\"$it\"" else it.toString()
+            }
          }
       }
    }

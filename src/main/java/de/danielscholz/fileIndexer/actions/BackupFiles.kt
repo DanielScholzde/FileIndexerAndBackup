@@ -32,16 +32,18 @@ class BackupFiles(private val pl: PersistenceLayer) {
     * @param targetDir target directory (without date)
     * @param indexArchiveContentsOfSourceDir Should the archives in the source directory be indexed?
     */
-   fun run(sourceDir: File,
-           targetDir: File,
-           includedPaths: List<String>,
-           mediumDescriptionSource: String?,
-           mediumDescriptionTarget: String?,
-           mediumSerialSource: String?,
-           mediumSerialTarget: String?,
-           indexArchiveContentsOfSourceDir: Boolean,
-           skipIndexFilesOfSourceDir: Boolean,
-           sourceReadConfig: IndexFiles.ReadConfig) {
+   fun run(
+      sourceDir: File,
+      targetDir: File,
+      includedPaths: List<String>,
+      mediumDescriptionSource: String?,
+      mediumDescriptionTarget: String?,
+      mediumSerialSource: String?,
+      mediumSerialTarget: String?,
+      indexArchiveContentsOfSourceDir: Boolean,
+      skipIndexFilesOfSourceDir: Boolean,
+      sourceReadConfig: IndexFiles.ReadConfig
+   ) {
 
       if (!testWriteableAndHardlinkSupport(targetDir)) return
 
@@ -49,15 +51,17 @@ class BackupFiles(private val pl: PersistenceLayer) {
          logger.info("Skip: Create index of source directory $sourceDir")
       } else {
          logger.info("Create index of source directory $sourceDir")
-         IndexFiles(sourceDir,
-                    includedPaths,
-                    null,
-                    mediumDescriptionSource,
-                    mediumSerialSource,
-                    indexArchiveContentsOfSourceDir,
-                    false,
-                    sourceReadConfig,
-                    pl).run()
+         IndexFiles(
+            sourceDir,
+            includedPaths,
+            null,
+            mediumDescriptionSource,
+            mediumSerialSource,
+            indexArchiveContentsOfSourceDir,
+            false,
+            sourceReadConfig,
+            pl
+         ).run()
       }
 
       val newestIndexRunSource = pl.getNewestPath(getVolumeSerialNr(sourceDir, mediumSerialSource), sourceDir, true)!!
@@ -99,37 +103,43 @@ class BackupFiles(private val pl: PersistenceLayer) {
          val pathWithoutPrefix = calcPathWithoutPrefix(targetSubDir)
          val filePath = pl.getOrInsertFullFilePath(File(pathWithoutPrefix))
 
-         val indexRunTarget = IndexRun(0,
-                                       pl,
-                                       filePath.id,
-                                       pathWithoutPrefix,
-                                       calcFilePathPrefix(targetSubDir),
-                                       includedPaths.convertToSortedStr(),
-                                       newestIndexRunSource.indexRun.excludedPaths,
-                                       newestIndexRunSource.indexRun.excludedFiles,
-                                       mediumDescriptionTarget,
-                                       mediumSerialT,
-                                       testCaseSensitive(targetDir),
-                                       now,
-                                       false,
-                                       true,
-                                       if (Config.INST.createHashOnlyForFirstMb) 1 else null,
-                                       Files.getFileStore(targetDir.toPath()).totalSpace,
-                                       -1, // updated after backup completed
-                                       true) // set to false after backup completed without failure
+         val indexRunTarget = IndexRun(
+            0,
+            pl,
+            filePath.id,
+            pathWithoutPrefix,
+            calcFilePathPrefix(targetSubDir),
+            includedPaths.convertToSortedStr(),
+            newestIndexRunSource.indexRun.excludedPaths,
+            newestIndexRunSource.indexRun.excludedFiles,
+            mediumDescriptionTarget,
+            mediumSerialT,
+            testCaseSensitive(targetDir),
+            now,
+            false,
+            true,
+            if (Config.INST.createHashOnlyForFirstMb) 1 else null,
+            Files.getFileStore(targetDir.toPath()).totalSpace,
+            -1, // updated after backup completed
+            true
+         ) // set to false after backup completed without failure
 
          if (!Config.INST.dryRun) {
             pl.insertIntoIndexRun(indexRunTarget)
          }
 
          val alreadyExistingFilesInBackup: Collection<Pair<FileLocation, FileLocation>> =
-               sourceFiles.intersect(allNotEmptyExistingBackupFiles.makeUnique(matchMode, false), matchMode, true)
+            sourceFiles.intersect(allNotEmptyExistingBackupFiles.makeUnique(matchMode, false), matchMode, true)
 
          val changedFiles: Collection<FileLocation> = sourceFiles - alreadyExistingFilesInBackup.map { it.first }
 
          val copiedFiles = mutableMapOf<String, FileLocation>()
 
-         logger.info("Create hardlinks. quantity: ${alreadyExistingFilesInBackup.size}, total size: ${alreadyExistingFilesInBackup.mapNotNull { it.first.fileContent?.fileSize }.sum().formatAsFileSize()}")
+         logger.info(
+            "Create hardlinks. quantity: {}, total size: {}",
+            alreadyExistingFilesInBackup.size,
+            alreadyExistingFilesInBackup.mapNotNull { it.first.fileContent?.fileSize }.sum().formatAsFileSize()
+         )
          logger.info("Copy changed files. quantity: ${changedFiles.size}, total size: ${changedFiles.mapNotNull { it.fileContent?.fileSize }.sum().formatAsFileSize()}")
          logger.info("")
 
@@ -177,10 +187,12 @@ class BackupFiles(private val pl: PersistenceLayer) {
 
 
    @Suppress("UNUSED_VALUE")
-   private fun checkModifiedCountAndShowConfirmDialog(sourceFiles: Collection<FileLocation>,
-                                                      newestExistingBackupFiles: Collection<FileLocation>,
-                                                      allNotEmptyExistingBackupFiles: Collection<FileLocation>,
-                                                      targetDir: File): Boolean {
+   private fun checkModifiedCountAndShowConfirmDialog(
+      sourceFiles: Collection<FileLocation>,
+      newestExistingBackupFiles: Collection<FileLocation>,
+      allNotEmptyExistingBackupFiles: Collection<FileLocation>,
+      targetDir: File
+   ): Boolean {
 
       val pathAndFilename = REL_PATH2 + FILENAME
 
@@ -249,26 +261,29 @@ class BackupFiles(private val pl: PersistenceLayer) {
 
       val maxLength = totalNumberOfFiles.toString().length
 
-      logger.info("Free diskspace:                ${totalSpace.formatAsFileSize()}\n" +
-                  "Total amount to backup:        ${sourceFilesUnique.fileSize().formatAsFileSize()}\n" +
-                  "Diskspace needed:              ${diskspaceNeeded.formatAsFileSize()}\n" +
-                  "Already present in the backup: ${alreadyExistingInBackup.formatAsFileSize()}\n" +
-                  "\n" +
-                  "Unchanged files:       ${leftPad(unchangedFiles.size, maxLength)} (${unchangedFiles.fileSize().formatAsFileSize()})\n" +
-                  "New files:             ${leftPad(newFiles.size, maxLength)} (${newFiles.fileSize().formatAsFileSize()})\n" +
-                  "Changed files:         ${leftPad(changedFiles.size, maxLength)} (${changedFiles.fileSize().formatAsFileSize()})\n" +
-                  "Renamed files:         ${leftPad(renamedFiles.size, maxLength)} (${renamedFiles.fileSize().formatAsFileSize()})\n" +
-                  "Moved files:           ${leftPad(movedFiles.size, maxLength)} (${movedFiles.fileSize().formatAsFileSize()})\n" +
-                  "Renamed+moved files:   ${leftPad(renamedAndMovedFiles.size, maxLength)} (${renamedAndMovedFiles.fileSize().formatAsFileSize()})\n" +
-                  "Deleted files:         ${leftPad(deletedFiles.size, maxLength)} (${deletedFiles.fileSize().formatAsFileSize()})\n" +
-                  "Total (excl. deleted): ${leftPad(sourceFiles.size, maxLength)} (${sourceFiles.fileSize().formatAsFileSize()})\n")
+      logger.info(
+         "Free diskspace:                ${totalSpace.formatAsFileSize()}\n" +
+               "Total amount to backup:        ${sourceFilesUnique.fileSize().formatAsFileSize()}\n" +
+               "Diskspace needed:              ${diskspaceNeeded.formatAsFileSize()}\n" +
+               "Already present in the backup: ${alreadyExistingInBackup.formatAsFileSize()}\n" +
+               "\n" +
+               "Unchanged files:       ${leftPad(unchangedFiles.size, maxLength)} (${unchangedFiles.fileSize().formatAsFileSize()})\n" +
+               "New files:             ${leftPad(newFiles.size, maxLength)} (${newFiles.fileSize().formatAsFileSize()})\n" +
+               "Changed files:         ${leftPad(changedFiles.size, maxLength)} (${changedFiles.fileSize().formatAsFileSize()})\n" +
+               "Renamed files:         ${leftPad(renamedFiles.size, maxLength)} (${renamedFiles.fileSize().formatAsFileSize()})\n" +
+               "Moved files:           ${leftPad(movedFiles.size, maxLength)} (${movedFiles.fileSize().formatAsFileSize()})\n" +
+               "Renamed+moved files:   ${leftPad(renamedAndMovedFiles.size, maxLength)} (${renamedAndMovedFiles.fileSize().formatAsFileSize()})\n" +
+               "Deleted files:         ${leftPad(deletedFiles.size, maxLength)} (${deletedFiles.fileSize().formatAsFileSize()})\n" +
+               "Total (excl. deleted): ${leftPad(sourceFiles.size, maxLength)} (${sourceFiles.fileSize().formatAsFileSize()})\n"
+      )
 
       if (usableSpace - diskspaceNeeded < totalSpace / 100 * Config.INST.minDiskFreeSpacePercent
-          || usableSpace - diskspaceNeeded < Config.INST.minDiskFreeSpaceMB * 1024L * 1024) {
+         || usableSpace - diskspaceNeeded < Config.INST.minDiskFreeSpaceMB * 1024L * 1024
+      ) {
 
          val msg = "Not enough free space on the target medium available.\n" +
-                   "Required is ${diskspaceNeeded.formatAsFileSize()}, but only ${usableSpace.formatAsFileSize()} is available.\n" +
-                   "Backup process is not started."
+               "Required is ${diskspaceNeeded.formatAsFileSize()}, but only ${usableSpace.formatAsFileSize()} is available.\n" +
+               "Backup process is not started."
 
          if (!Config.INST.confirmations) {
             logger.error(msg)
@@ -282,30 +297,35 @@ class BackupFiles(private val pl: PersistenceLayer) {
 
       val changedPercent = if (totalNumberOfFiles > 0) changedNumberOfFiles * 100 / totalNumberOfFiles else 0
       if (changedPercent >= Config.INST.maxChangedFilesWarningPercent
-          && changedNumberOfFiles > Config.INST.minAllowedChanges) {
+         && changedNumberOfFiles > Config.INST.minAllowedChanges
+      ) {
          val dialogResult = JOptionPane.showConfirmDialog(
-               null,
-               "More files were changed or deleted than allowed\n" +
-               "(changed: ${changedFiles.size}, deleted: ${deletedFiles.size}. This corresponds to: $changedPercent%). " +
-               "Do you want to continue the backup process?",
-               "Confirmation",
-               JOptionPane.YES_NO_OPTION)
+            null,
+            "More files were changed or deleted than allowed\n" +
+                  "(changed: ${changedFiles.size}, deleted: ${deletedFiles.size}. This corresponds to: $changedPercent%). " +
+                  "Do you want to continue the backup process?",
+            "Confirmation",
+            JOptionPane.YES_NO_OPTION
+         )
          if (dialogResult != JOptionPane.YES_OPTION) {
             return false
          }
       }
 
       val dialogResult = JOptionPane.showConfirmDialog(
-            null,
-            "A backup will be created for ${sourceFiles.size} files (${sourceFilesUnique.fileSize().formatAsFileSize()}) (diskspace needed: ${diskspaceNeeded.formatAsFileSize()}).\n" +
-            "New: ${newFiles.size} (${newFiles.fileSize().formatAsFileSize()})\n" +
-            "Changed: ${changedFiles.size} (${changedFiles.fileSize().formatAsFileSize()})\n" +
-            "Renamed/moved: ${renamedFiles.size + movedFiles.size + renamedAndMovedFiles.size} (${(renamedFiles.fileSize() + movedFiles.fileSize() + renamedAndMovedFiles.fileSize()).formatAsFileSize()})\n" +
-            "Deleted: ${deletedFiles.size} (${deletedFiles.fileSize().formatAsFileSize()})\n" +
-            "Unchanged: ${unchangedFiles.size} (${unchangedFiles.fileSize().formatAsFileSize()})\n" +
-            "Do you want to continue the backup process?",
-            "Confirmation",
-            JOptionPane.YES_NO_OPTION)
+         null,
+         "A backup will be created for ${sourceFiles.size} files (${
+            sourceFilesUnique.fileSize().formatAsFileSize()
+         }) (diskspace needed: ${diskspaceNeeded.formatAsFileSize()}).\n" +
+               "New: ${newFiles.size} (${newFiles.fileSize().formatAsFileSize()})\n" +
+               "Changed: ${changedFiles.size} (${changedFiles.fileSize().formatAsFileSize()})\n" +
+               "Renamed/moved: ${renamedFiles.size + movedFiles.size + renamedAndMovedFiles.size} (${(renamedFiles.fileSize() + movedFiles.fileSize() + renamedAndMovedFiles.fileSize()).formatAsFileSize()})\n" +
+               "Deleted: ${deletedFiles.size} (${deletedFiles.fileSize().formatAsFileSize()})\n" +
+               "Unchanged: ${unchangedFiles.size} (${unchangedFiles.fileSize().formatAsFileSize()})\n" +
+               "Do you want to continue the backup process?",
+         "Confirmation",
+         JOptionPane.YES_NO_OPTION
+      )
       if (dialogResult != JOptionPane.YES_OPTION) {
          return false
       }
@@ -314,9 +334,11 @@ class BackupFiles(private val pl: PersistenceLayer) {
    }
 
 
-   private fun createCopy(indexRunTarget: IndexRun,
-                          sourceFileLocation: FileLocation,
-                          indexRun: IndexRun): FileLocation {
+   private fun createCopy(
+      indexRunTarget: IndexRun,
+      sourceFileLocation: FileLocation,
+      indexRun: IndexRun
+   ): FileLocation {
 
       val newBackupFile = File(sourceFileLocation.getFullFilePathForTarget(indexRunTarget))
       val sourceFile = File(sourceFileLocation.getFullFilePath())
@@ -328,20 +350,22 @@ class BackupFiles(private val pl: PersistenceLayer) {
          Global.createdFilesCallback(newBackupFile)
       }
 
-      val fileLocation = FileLocation(0,
-                                      pl,
-                                      sourceFileLocation.fileContentId,
-                                      sourceFileLocation.filePathId,
-                                      indexRun.id,
-                                      sourceFileLocation.filename,
-                                      sourceFileLocation.extension,
-                                      sourceFileLocation.created,
-                                      sourceFileLocation.modified,
-                                      sourceFileLocation.hidden,
-                                      sourceFileLocation.inArchive,
-                                      null,
-                                      indexRun,
-                                      sourceFileLocation.fileContent)
+      val fileLocation = FileLocation(
+         0,
+         pl,
+         sourceFileLocation.fileContentId,
+         sourceFileLocation.filePathId,
+         indexRun.id,
+         sourceFileLocation.filename,
+         sourceFileLocation.extension,
+         sourceFileLocation.created,
+         sourceFileLocation.modified,
+         sourceFileLocation.hidden,
+         sourceFileLocation.inArchive,
+         null,
+         indexRun,
+         sourceFileLocation.fileContent
+      )
 
       if (!Config.INST.dryRun) {
          return pl.insertIntoFileLocation(fileLocation)
@@ -351,10 +375,12 @@ class BackupFiles(private val pl: PersistenceLayer) {
    }
 
 
-   private fun createHardlink(indexRunTarget: IndexRun,
-                              sourceFileLocation: FileLocation,
-                              existingBackupFileLocation: FileLocation,
-                              indexRun: IndexRun) {
+   private fun createHardlink(
+      indexRunTarget: IndexRun,
+      sourceFileLocation: FileLocation,
+      existingBackupFileLocation: FileLocation,
+      indexRun: IndexRun
+   ) {
 
       val newBackupFile = File(sourceFileLocation.getFullFilePathForTarget(indexRunTarget))
       val existingBackupFile = File(existingBackupFileLocation.getFullFilePath())
@@ -371,20 +397,23 @@ class BackupFiles(private val pl: PersistenceLayer) {
          }
 
          pl.insertIntoFileLocation(
-               FileLocation(0,
-                            pl,
-                            sourceFileLocation.fileContentId,
-                            sourceFileLocation.filePathId,
-                            indexRun.id,
-                            sourceFileLocation.filename,
-                            sourceFileLocation.extension,
-                            existingBackupFileLocation.created,
-                            existingBackupFileLocation.modified,
-                            existingBackupFileLocation.hidden,
-                            existingBackupFileLocation.inArchive,
-                            existingBackupFileLocation.referenceInode,
-                            indexRun,
-                            existingBackupFileLocation.fileContent))
+            FileLocation(
+               0,
+               pl,
+               sourceFileLocation.fileContentId,
+               sourceFileLocation.filePathId,
+               indexRun.id,
+               sourceFileLocation.filename,
+               sourceFileLocation.extension,
+               existingBackupFileLocation.created,
+               existingBackupFileLocation.modified,
+               existingBackupFileLocation.hidden,
+               existingBackupFileLocation.inArchive,
+               existingBackupFileLocation.referenceInode,
+               indexRun,
+               existingBackupFileLocation.fileContent
+            )
+         )
       }
    }
 

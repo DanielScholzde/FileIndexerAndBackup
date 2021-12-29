@@ -6,7 +6,6 @@ import org.junit.Before
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.*
-import java.lang.Exception
 import java.nio.file.Files
 import kotlin.test.fail
 
@@ -35,6 +34,7 @@ open class BaseTest(val dbname: String = "target/test-classes/test.db") {
    private fun init() {
       Global.createdFilesCallback = { createdFiles.add(it) }
       Global.createdDirsCallback = { createdDirs.add(it) }
+      Config.INST.logLevel = "debug"
 
       File(dbname).delete()
    }
