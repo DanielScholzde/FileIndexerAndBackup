@@ -64,7 +64,7 @@ class IndexFiles(
 
    private val stat = IndexFilesStats { getParallelReads() }
 
-   private var channel = Channel<suspend () -> Unit>(capacity = 10)
+   private var channel = Channel<Pair<suspend () -> Unit, String>>(capacity = 10)
 
 
    fun run(): Pair<IndexRun, Int> {
@@ -122,7 +122,8 @@ class IndexFiles(
                      repeat(times = min(numThreads, Config.INST.maxThreads)) {
                         launch {
                            for (processFileCallbackNoExc in channel) {
-                              processFileCallbackNoExc()
+                              logger.trace("channel.received: {}", processFileCallbackNoExc.second)
+                              processFileCallbackNoExc.first.invoke()
                            }
                         }
                      }
@@ -150,7 +151,6 @@ class IndexFiles(
       return indexRun to stat.indexedFilesCount.get()
    }
 
-   // todo consider param excluded
    private fun loadAlreadyIndexedFiles(dir: File, excluded: Excluded, mediumSerial: String?) {
       data class FLKey(val filePathId: Long, val filename: String)
 
@@ -215,7 +215,8 @@ class IndexFiles(
             val fileProcessor: suspend () -> Unit = {
                processFileTopLevelNoExc(file, filePath)
             }
-            channel.send(fileProcessor)
+            logger.trace("channel.send: {}", file.name)
+            channel.send(fileProcessor to file.name)
          }
       }
 
@@ -230,7 +231,8 @@ class IndexFiles(
    private suspend fun processFileTopLevelNoExc(file: File, filePath: FilePath) {
       try {
          if (isArchiveToProcess(file)) {
-            readSemaphore(file.name, file.length(), false, false) {
+
+            readSemaphore(file.name, file.length()) {
                val filePathCache = mutableMapOf<String, FilePath>()
 
                val archiveRead = processArchiveSuspending(
@@ -244,10 +246,12 @@ class IndexFiles(
                      logger.error(msg)
                   })
 
-               processNormalFile(file, filePath, archiveRead, true)
+               processNormalFile(file, filePath, archiveRead)
             }
          } else {
-            processNormalFile(file, filePath, false, false)
+            readSemaphore(file.name, file.length()) {
+               processNormalFile(file, filePath, false)
+            }
          }
       } catch (e: CancelException) {
          // todo
@@ -256,7 +260,7 @@ class IndexFiles(
       }
    }
 
-   private suspend fun processNormalFile(file: File, filePath: FilePath, archiveRead: Boolean, alreadyWithinReadSemaphore: Boolean) {
+   private suspend fun processNormalFile(file: File, filePath: FilePath, archiveRead: Boolean) {
       try {
          @Suppress("BlockingMethodInNonBlockingContext")
          val attributes = Files.readAttributes(
@@ -280,8 +284,7 @@ class IndexFiles(
                file.isHidden,
                false,
                null,
-               archiveRead,
-               alreadyWithinReadSemaphore
+               archiveRead
             )
          }
       } catch (e: IOException) {
@@ -326,8 +329,7 @@ class IndexFiles(
          hidden = false,
          inArchive = true,
          archiveName = archiveFile.name,
-         archiveRead = true,
-         alreadyWithinReadSemaphore = true
+         archiveRead = true
       )
    }
 
@@ -341,18 +343,17 @@ class IndexFiles(
       hidden: Boolean,
       inArchive: Boolean,
       archiveName: String?,
-      archiveRead: Boolean,
-      alreadyWithinReadSemaphore: Boolean
+      archiveRead: Boolean
    ) {
-      synchronized(filename, fileSize) {
-         if (logger.isDebugEnabled) {
-            logger.debug("index: {}, file size: {}{}", filename, fileSize.formatAsFileSize(), inArchive.ifTrue(" (archive: $archiveName)", ""))
-         }
+      if (logger.isDebugEnabled) {
+         logger.debug("index: {}, file size: {}{}", filename, fileSize.formatAsFileSize(), inArchive.ifTrue(" (archive: $archiveName)", ""))
+      }
 
-         var fileContentId: Long? = null
-         var referenceInode: Long? = null
+      var fileContentId: Long? = null
+      var referenceInode: Long? = null
 
-         if (fileSize > 0) {
+      if (fileSize > 0) {
+         synchronized(filename, fileSize) {
             val result = createFileContent(
                lazyInputStream,
                fileSize,
@@ -360,51 +361,50 @@ class IndexFiles(
                filename,
                filePath,
                inArchive,
-               archiveName,
-               alreadyWithinReadSemaphore
+               archiveName
             )
             fileContentId = result.first
             referenceInode = result.second
          }
+      }
 
-         val fileLocation = pl.insertIntoFileLocation(
-            FileLocation(
-               0,
-               pl,
-               fileContentId,
-               filePath.id,
-               indexRun.id,
-               filename,
-               filename.getFileExtension(),
-               created,
-               modified,
-               hidden,
-               inArchive,
-               referenceInode
-            )
+      val fileLocation = pl.insertIntoFileLocation(
+         FileLocation(
+            0,
+            pl,
+            fileContentId,
+            filePath.id,
+            indexRun.id,
+            filename,
+            filename.getFileExtension(),
+            created,
+            modified,
+            hidden,
+            inArchive,
+            referenceInode
          )
+      )
 
-         if (fileSize > 0 && !inArchive) {
-            addAlreadyIndexedFile(fileLocation, fileSize, modified)
-         }
+      if (fileSize > 0 && !inArchive) {
+         addAlreadyIndexedFile(fileLocation, fileSize, modified)
+      }
 
-         Global.stat.indexedFilesCount++
-         Global.stat.indexedFilesSize += fileSize
-         stat.indexedFilesCount++
-         if (inArchive) {
+      Global.stat.indexedFilesCount++
+      Global.stat.indexedFilesSize += fileSize
+      stat.indexedFilesCount++
+      if (inArchive) {
+         stat.indexedFilesSize += fileSize
+      } else {
+         if (!archiveRead) {
             stat.indexedFilesSize += fileSize
-         } else {
-            if (!archiveRead) {
-               stat.indexedFilesSize += fileSize
-            }
-
-            stat.indexedFilesCountNoArchive++
-            stat.indexedFilesSizeNoArchive += fileSize
          }
 
-         if (logger.isTraceEnabled) {
-            logger.trace("END index: {}, file size: {}{}", filename, fileSize.formatAsFileSize(), inArchive.ifTrue(" (archive: $archiveName)", ""))
-         }
+         stat.indexedFilesCountNoArchive++
+         stat.indexedFilesSizeNoArchive += fileSize
+      }
+
+      if (logger.isTraceEnabled) {
+         logger.trace("END index: {}, file size: {}{}", filename, fileSize.formatAsFileSize(), inArchive.ifTrue(" (archive: $archiveName)", ""))
       }
    }
 
@@ -415,15 +415,14 @@ class IndexFiles(
     *
     * Wenn die Datei ein Bild ist, wird ein Thumbnail erstellt und ein FileMeta-Eintrag erzeugt.
     */
-   private suspend fun createFileContent(
+   private fun createFileContent(
       lazyInputStream: Lazy<InputStreamWrapper>,
       fileSize: Long,
       modified: Instant,
       filename: String,
       filePath: FilePath,
       inArchive: Boolean,
-      archiveName: String?,
-      alreadyWithinReadSemaphore: Boolean
+      archiveName: String?
    ): Pair<Long, Long?> {
 
       if (!inArchive) {
@@ -475,11 +474,10 @@ class IndexFiles(
             if (lastIndexedFileLocation.filename == filename
                && compareFilePaths(lastIndexedFileLocation, filePath)
                && (Config.INST.ignoreHashInFastMode
-                     || lastIndexedFileLocation.fileContent!!.hashBegin.startsWith(
-                  readSemaphore(filename, fileSize, inArchive, alreadyWithinReadSemaphore) {
-                     stat.currentProcessedFile = if (archiveName != null) "$archiveName / $filename" else filename
-                     checksumFromBeginTemp.value
-                  }
+                     || lastIndexedFileLocation.fileContent!!.hashBegin.startsWith(let {
+                  stat.currentProcessedFile = if (archiveName != null) "$archiveName / $filename" else filename
+                  checksumFromBeginTemp.value
+               }
                ))
             ) {
 
@@ -496,7 +494,7 @@ class IndexFiles(
       Global.stat.notFastModeHitCount++
 
       // calculate hash, expensive!
-      val checksum = readSemaphore(filename, fileSize, inArchive, alreadyWithinReadSemaphore) {
+      val checksum = let {
          stat.currentProcessedFile = if (archiveName != null) "$archiveName / $filename" else filename
          checksumCreator.value.calcChecksum()
       }
@@ -686,13 +684,8 @@ class IndexFiles(
    private suspend fun <T> readSemaphore(
       filename: String,
       fileSize: Long,
-      inArchive: Boolean,
-      alreadyWithinReadSemaphore: Boolean,
       block: suspend () -> T
    ): T {
-      if (inArchive || alreadyWithinReadSemaphore) {
-         return block()
-      }
       if (readConfig.smallFilesSizeThreshold == 0) {
          return readSemaphore.withPermit("General", filename) {
             block()
@@ -705,16 +698,16 @@ class IndexFiles(
                block()
             }
             2 -> return readSemaphoreSmall.withPermit("Small", filename) {
-               readSemaphoreSmall.withPermit("Small", filename) {
-                  block()
-               }
+//               readSemaphoreSmall.withPermit("Small", filename) {
+               block()
+//               }
             }
             3 -> return readSemaphoreSmall.withPermit("Small", filename) {
-               readSemaphoreSmall.withPermit("Small", filename) {
-                  readSemaphoreSmall.withPermit("Small", filename) {
-                     block()
-                  }
-               }
+//               readSemaphoreSmall.withPermit("Small", filename) {
+//                  readSemaphoreSmall.withPermit("Small", filename) {
+               block()
+//                  }
+//               }
             }
             else -> throw Exception("Parameter maxParallelReadsSmallFilesFactor has invalid value")
          }
@@ -744,7 +737,6 @@ class IndexFiles(
       try {
          return action()
       } finally {
-         logger.trace("Semaphore {} {} permit release", semaphoreName, filename)
          release()
          logger.trace("Semaphore {} {} permit released", semaphoreName, filename)
       }
@@ -757,8 +749,8 @@ class IndexFiles(
       try {
          return action()
       } finally {
-         logger.trace("Mutex {} permit release", name)
          unlock()
+         logger.trace("Mutex {} permit released", name)
       }
    }
 }
