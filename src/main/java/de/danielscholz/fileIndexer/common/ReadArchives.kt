@@ -45,6 +45,9 @@ fun processArchive(
                      processEntry(InputStreamWrapperImpl(inputStream), zipArchiveEntry)
                   }
                }
+               if (testIfCancelNoException()) {
+                  break
+               }
             }
          }
       } else if (archive.name.lowercase().endsWith(".tar.gz")) {

@@ -64,7 +64,7 @@ class IndexFiles(
 
    private val stat = IndexFilesStats { getParallelReads() }
 
-   private var channel = Channel<suspend () -> Unit>() // size=0 --> RENDEZVOUS
+   private var channel = Channel<suspend () -> Unit>(capacity = 10)
 
 
    fun run(): Pair<IndexRun, Int> {
@@ -181,7 +181,7 @@ class IndexFiles(
    }
 
 
-   private suspend fun processFolderNoExc(sourceDir: File, parentFilePath: FilePath?, includedPaths: List<Path>): FilePath {
+   private suspend fun processFolderNoExc(sourceDir: File, parentFilePath: FilePath?, includedPaths: List<Path>) {
       logger.info("index: {}", sourceDir)
 
       val filePath = if (parentFilePath != null) {
@@ -202,33 +202,28 @@ class IndexFiles(
       stat.currentProcessedFile = "Read directory $sourceDir"
       val (folders, files) = readDir(sourceDir, caseSensitiveFS, includedPaths)
 
-      sendFilesOfFolderToChannelNoExc(files, filePath)
+      if (files.isNotEmpty()) {
+         val sortedFiles = files
+            .map { file -> file to file.length() } // read file size for every file
+            .sortedByDescending { it.second } // order by file size descending to process bigger files first
+
+         for ((file, _) in sortedFiles) {
+            if (testIfCancelNoException(pl.db)) {
+               break
+            }
+
+            val fileProcessor: suspend () -> Unit = {
+               processFileTopLevelNoExc(file, filePath)
+            }
+            channel.send(fileProcessor)
+         }
+      }
 
       for (folder in folders) {
-         processFolderNoExc(folder.first, filePath, folder.second)
-      }
-
-      return filePath
-   }
-
-   private suspend fun sendFilesOfFolderToChannelNoExc(files: List<File>, filePath: FilePath) {
-      if (files.isEmpty()) {
-         return
-      }
-
-      val sortedFiles = files
-         .map { file -> file to file.length() } // read file size for every file
-         .sortedByDescending { it.second } // order by file size descending to process bigger files first
-
-      for ((file, _) in sortedFiles) {
          if (testIfCancelNoException(pl.db)) {
-            return
+            break
          }
-
-         val fileProcessor: suspend () -> Unit = {
-            processFileTopLevelNoExc(file, filePath)
-         }
-         channel.send(fileProcessor)
+         processFolderNoExc(folder.first, filePath, folder.second)
       }
    }
 
