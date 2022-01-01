@@ -14,23 +14,31 @@ class BackupFilesTest : BaseTest() {
    fun test1() {
       Files.createDirectories(File("$root/target").toPath())
 
-      main(arrayOf(Commands.BACKUP_FILES.command,
-                   "--db", dbname,
-                   "--progressWindow:no",
-                   "--confirmations:no",
-                   "--mediumSerialSource", "S",
-                   "--mediumSerialTarget", "T",
-                   "--timeZone", "Europe/Berlin",
-                   "$root/source/", "$root/target/")) { pl ->
+      main(
+         arrayOf(
+            Commands.BACKUP_FILES.command,
+            "--db", dbname,
+            "--progressWindow:no",
+            "--confirmations:no",
+            "--mediumSerialSource", "S",
+            "--mediumSerialTarget", "T",
+            "--timeZone", "Europe/Berlin",
+            "$root/source/", "$root/target/"
+         )
+      ) { pl ->
          println(pl.db.queryDebug("Select * from IndexRun "))
          println(pl.db.queryDebug("Select * from FileLocation "))
          println(pl.db.queryDebug("Select * from FileContent "))
          println(pl.db.queryDebug("Select * from FilePath "))
       }
 
-      main(arrayOf(Commands.LIST_INDEX_RUNS.command,
-                   "--db", dbname,
-                   "$root/target/"))
+      main(
+         arrayOf(
+            Commands.LIST_INDEX_RUNS.command,
+            "--db", dbname,
+            "$root/target/"
+         )
+      )
    }
 
    @Test
@@ -38,25 +46,33 @@ class BackupFilesTest : BaseTest() {
       Files.createDirectories(File("$root/target").toPath())
       waitUntilNextSecond()
 
-      main(arrayOf(Commands.BACKUP_FILES.command,
-                   "--db", dbname,
-                   "--progressWindow:no",
-                   "--confirmations:no",
-                   "--timeZone", "Europe/Berlin",
-                   "--mediumSerialSource", "S",
-                   "--mediumSerialTarget", "T",
-                   "$root/source/", "$root/target/"))
+      main(
+         arrayOf(
+            Commands.BACKUP_FILES.command,
+            "--db", dbname,
+            "--progressWindow:no",
+            "--confirmations:no",
+            "--timeZone", "Europe/Berlin",
+            "--mediumSerialSource", "S",
+            "--mediumSerialTarget", "T",
+            "$root/source/", "$root/target/"
+         )
+      )
 
       waitUntilNextSecond()
 
-      main(arrayOf(Commands.BACKUP_FILES.command,
-                   "--db", dbname,
-                   "--progressWindow:no",
-                   "--confirmations:no",
-                   "--timeZone", "Europe/Berlin",
-                   "--mediumSerialSource", "S",
-                   "--mediumSerialTarget", "T",
-                   "$root/source/", "$root/target/")) { pl ->
+      main(
+         arrayOf(
+            Commands.BACKUP_FILES.command,
+            "--db", dbname,
+            "--progressWindow:no",
+            "--confirmations:no",
+            "--timeZone", "Europe/Berlin",
+            "--mediumSerialSource", "S",
+            "--mediumSerialTarget", "T",
+            "$root/source/", "$root/target/"
+         )
+      ) { pl ->
          println(pl.db.queryDebug("Select * from IndexRun "))
          println(pl.db.queryDebug("Select * from FileLocation "))
          println(pl.db.queryDebug("Select * from FileContent "))
@@ -75,14 +91,18 @@ class BackupFilesTest : BaseTest() {
       copyFile("$root/source/file2.txt", "$root/source/file2Copy.txt")
       createFile("$root/source/file3.txt", "content3")
 
-      main(arrayOf(Commands.BACKUP_FILES.command,
-                   "--db", dbname,
-                   "--progressWindow:no",
-                   "--confirmations:no",
-                   "--timeZone", "Europe/Berlin",
-                   "--mediumSerialSource", "S",
-                   "--mediumSerialTarget", "T",
-                   "$root/source/", "$root/target/"))
+      main(
+         arrayOf(
+            Commands.BACKUP_FILES.command,
+            "--db", dbname,
+            "--progressWindow:no",
+            "--confirmations:no",
+            "--timeZone", "Europe/Berlin",
+            "--mediumSerialSource", "S",
+            "--mediumSerialTarget", "T",
+            "$root/source/", "$root/target/"
+         )
+      )
 
       waitUntilNextSecond()
 
@@ -90,14 +110,18 @@ class BackupFilesTest : BaseTest() {
       renameFile("$root/source/file2.txt", "$root/source/subdir/file2_.txt")
       deleteFile("$root/source/file3.txt")
 
-      main(arrayOf(Commands.BACKUP_FILES.command,
-                   "--db", dbname,
-                   "--progressWindow:no",
-                   "--confirmations:no",
-                   "--timeZone", "Europe/Berlin",
-                   "--mediumSerialSource", "S",
-                   "--mediumSerialTarget", "T",
-                   "$root/source/", "$root/target/")) { pl ->
+      main(
+         arrayOf(
+            Commands.BACKUP_FILES.command,
+            "--db", dbname,
+            "--progressWindow:no",
+            "--confirmations:no",
+            "--timeZone", "Europe/Berlin",
+            "--mediumSerialSource", "S",
+            "--mediumSerialTarget", "T",
+            "$root/source/", "$root/target/"
+         )
+      ) { pl ->
          println(pl.db.queryDebug("Select * from IndexRun "))
          println(pl.db.queryDebug("Select * from FileLocation "))
          println(pl.db.queryDebug("Select * from FileContent "))

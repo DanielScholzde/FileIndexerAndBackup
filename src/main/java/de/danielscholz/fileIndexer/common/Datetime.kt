@@ -43,6 +43,6 @@ fun ZonedDateTime.toStrSys(): String {
 
 fun ZonedDateTime.toStrFilename(): String {
    return toStrSys()
-             .replace(Regex("[:]"), "")
-             .replace('-', '_')
+      .replace(Regex("[:]"), "")
+      .replace('-', '_')
 }

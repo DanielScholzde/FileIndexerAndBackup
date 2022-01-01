@@ -37,24 +37,30 @@ class FindDuplicateFiles(private val pl: PersistenceLayer) {
       if (pathsToSearchIn.size != toSearchInDirs.size || pathReference == null) return listOf()
 
       val hasOnlyPartialHash = pathsToSearchIn.filter { it.indexRun.onlyReadFirstMbOfContentForHash != null }.count() > 0 ||
-                               pathReference.indexRun.onlyReadFirstMbOfContentForHash != null
+            pathReference.indexRun.onlyReadFirstMbOfContentForHash != null
       if (hasOnlyPartialHash) {
          logger.warn("ATTENTION: At least one file index set was created with parameter createHashOnlyForFirstMb!")
       }
 
-      return find(pathReference, pathsToSearchIn,
-                  Intersect(MatchMode.FILE_SIZE +
-                            (if (hasOnlyPartialHash) MatchMode.HASH_BEGIN_1MB else MatchMode.HASH) +
-                            (if (inclFilenameOnCompare) MatchMode.FILENAME else MatchMode.FILE_SIZE), true),
-            // Exclude same FileLocation and Hardlinks as result
-                  ResultFilter.ID_NEQ and ResultFilter.HARDLINK_NEQ)
+      return find(
+         pathReference, pathsToSearchIn,
+         Intersect(
+            MatchMode.FILE_SIZE +
+                  (if (hasOnlyPartialHash) MatchMode.HASH_BEGIN_1MB else MatchMode.HASH) +
+                  (if (inclFilenameOnCompare) MatchMode.FILENAME else MatchMode.FILE_SIZE), true
+         ),
+         // Exclude same FileLocation and Hardlinks as result
+         ResultFilter.ID_NEQ and ResultFilter.HARDLINK_NEQ
+      )
    }
 
 
-   private fun find(pathReference: IndexRunFilePathResult,
-                    pathsToSearchIn: List<IndexRunFilePathResult>,
-                    intersect: Intersect,
-                    resultFilter: ResultFilter): List<FileLocation> {
+   private fun find(
+      pathReference: IndexRunFilePathResult,
+      pathsToSearchIn: List<IndexRunFilePathResult>,
+      intersect: Intersect,
+      resultFilter: ResultFilter
+   ): List<FileLocation> {
 
       val foundResult = mutableListMultimapOf<String, FileLocation>()
 

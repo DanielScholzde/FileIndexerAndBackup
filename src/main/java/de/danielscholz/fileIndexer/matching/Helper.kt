@@ -40,7 +40,7 @@ fun createKey(fileLocation: FileLocation, mode: EnumSet<MatchMode>): String {
    if (MatchMode.REL_PATH in mode) {
       val mediumCaseSensitive = fileLocation.indexRun!!.mediumCaseSensitive
       var path = fileLocation.pl.getFilePath(fileLocation.indexRun!!.filePathId).path +
-                 fileLocation.pl.getFilePath(fileLocation.filePathId).path
+            fileLocation.pl.getFilePath(fileLocation.filePathId).path
       for (relPath in Global.relPathRoots) {
          if (path.startsWith(relPath, !mediumCaseSensitive)) {
             path = path.substring(relPath.length)
@@ -82,39 +82,51 @@ operator fun EnumSet<MatchMode>.plus(b: MatchMode): EnumSet<MatchMode> {
 }
 
 
-fun Collection<FileLocation>.subtract(other: Collection<FileLocation>,
-                                      mode: EnumSet<MatchMode>,
-                                      multimapMatching: Boolean): Collection<FileLocation> {
+fun Collection<FileLocation>.subtract(
+   other: Collection<FileLocation>,
+   mode: EnumSet<MatchMode>,
+   multimapMatching: Boolean
+): Collection<FileLocation> {
    return Subtract(mode, multimapMatching).apply(this, other)
 }
 
-fun Sequence<FileLocation>.subtract(other: Sequence<FileLocation>,
-                                    mode: EnumSet<MatchMode>,
-                                    multimapMatching: Boolean): Sequence<FileLocation> {
+fun Sequence<FileLocation>.subtract(
+   other: Sequence<FileLocation>,
+   mode: EnumSet<MatchMode>,
+   multimapMatching: Boolean
+): Sequence<FileLocation> {
    return SubtractSeq(mode, multimapMatching).apply(this, other)
 }
 
-fun Collection<FileLocation>.intersect(other: Collection<FileLocation>,
-                                       mode: EnumSet<MatchMode>,
-                                       multimapMatching: Boolean): Collection<Pair<FileLocation, FileLocation>> {
+fun Collection<FileLocation>.intersect(
+   other: Collection<FileLocation>,
+   mode: EnumSet<MatchMode>,
+   multimapMatching: Boolean
+): Collection<Pair<FileLocation, FileLocation>> {
    return Intersect(mode, multimapMatching).apply(this, other)
 }
 
-fun Sequence<FileLocation>.intersect(other: Sequence<FileLocation>,
-                                     mode: EnumSet<MatchMode>,
-                                     multimapMatching: Boolean): Sequence<Pair<FileLocation, FileLocation>> {
+fun Sequence<FileLocation>.intersect(
+   other: Sequence<FileLocation>,
+   mode: EnumSet<MatchMode>,
+   multimapMatching: Boolean
+): Sequence<Pair<FileLocation, FileLocation>> {
    return IntersectSeq(mode, multimapMatching).apply(this, other)
 }
 
-fun Collection<FileLocation>.union(other: Collection<FileLocation>,
-                                   mode: EnumSet<MatchMode>,
-                                   errorOnKeyCollision: Boolean): Collection<FileLocation> {
+fun Collection<FileLocation>.union(
+   other: Collection<FileLocation>,
+   mode: EnumSet<MatchMode>,
+   errorOnKeyCollision: Boolean
+): Collection<FileLocation> {
    return Union(mode, errorOnKeyCollision).apply(this, other)
 }
 
-fun Sequence<FileLocation>.union(other: Sequence<FileLocation>,
-                                 mode: EnumSet<MatchMode>,
-                                 errorOnKeyCollision: Boolean): Sequence<FileLocation> {
+fun Sequence<FileLocation>.union(
+   other: Sequence<FileLocation>,
+   mode: EnumSet<MatchMode>,
+   errorOnKeyCollision: Boolean
+): Sequence<FileLocation> {
    return UnionSeq(mode, errorOnKeyCollision).apply(this, other)
 }
 

@@ -51,10 +51,11 @@ open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
          IndexRunFailures.ONLY_FAILURES -> "r.failureOccurred = 1"
       }
       return db.dbQuery(
-            "SELECT distinct ${getIndexRunSqlAttr("r")}" +
-            " FROM IndexRun r " +
-            " WHERE $cond " +
-            " ORDER BY r.runDate DESC, r.id DESC", listOf()) {
+         "SELECT distinct ${getIndexRunSqlAttr("r")}" +
+               " FROM IndexRun r " +
+               " WHERE $cond " +
+               " ORDER BY r.runDate DESC, r.id DESC", listOf()
+      ) {
          extractIndexRun(it, "r")!!
       }
    }
@@ -96,17 +97,18 @@ open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
       }
 
       return db.dbQuery(
-            "SELECT distinct ${getIndexRunSqlAttr("r")} " +
-            " FROM IndexRun r " +
-            " WHERE " +
-            "       $cond " +
-            "       $cond2 " +
-            " ORDER BY r.runDate DESC, r.id DESC ", params) {
+         "SELECT distinct ${getIndexRunSqlAttr("r")} " +
+               " FROM IndexRun r " +
+               " WHERE " +
+               "       $cond " +
+               "       $cond2 " +
+               " ORDER BY r.runDate DESC, r.id DESC ", params
+      ) {
          extractIndexRun(it, "r")!!
       }.filter { indexRun ->
          pathWithoutPrefix.startsWith(indexRun.path) ||
-         (indexRun.isBackup &&
-          pathWithoutPrefix.ensureSuffix("/") == indexRun.path.substring(0, indexRun.path.lastIndexOf('/', indexRun.path.lastIndex - 1) + 1))
+               (indexRun.isBackup &&
+                     pathWithoutPrefix.ensureSuffix("/") == indexRun.path.substring(0, indexRun.path.lastIndexOf('/', indexRun.path.lastIndex - 1) + 1))
       }
    }
 
@@ -165,11 +167,13 @@ open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
    /**
     * Searches all indexRuns for a matching indexed path. Returns either all results or only the first one (when singleResult=true).
     */
-   private fun getPathIntern(mediumSerial: String?,
-                             dir: File,
-                             singleResult: Boolean,
-                             failures: IndexRunFailures,
-                             fromIndexRunId: Long?): List<IndexRunFilePathResult> {
+   private fun getPathIntern(
+      mediumSerial: String?,
+      dir: File,
+      singleResult: Boolean,
+      failures: IndexRunFailures,
+      fromIndexRunId: Long?
+   ): List<IndexRunFilePathResult> {
       val result = mutableListOf<IndexRunFilePathResult>()
       val serial = if (mediumSerial == "auto") getVolumeSerialNr(dir, null) else mediumSerial
       val pathPrefix = if (serial == null) calcFilePathPrefix(dir) else null
@@ -225,19 +229,23 @@ open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
       return filePathCache.getFilePath(filePathId).path
    }
 
-   fun loadFileLocationsForPath(mediumSerial: String?,
-                                path: File,
-                                excludeIndexRunsWithFailures: Boolean = false,
-                                inclFilesInArchives: Boolean = true): Collection<FileLocation> {
+   fun loadFileLocationsForPath(
+      mediumSerial: String?,
+      path: File,
+      excludeIndexRunsWithFailures: Boolean = false,
+      inclFilesInArchives: Boolean = true
+   ): Collection<FileLocation> {
 
       val indexRunFilePathResult = getNewestPath(mediumSerial, path, excludeIndexRunsWithFailures) ?: return emptyList()
       return LoadFileLocations(indexRunFilePathResult, this).load(inclFilesInArchives)
    }
 
-   fun loadFileLocationsForPaths(mediumSerial: String?,
-                                 dirs: List<File>,
-                                 excludeIndexRunsWithFailures: Boolean = false,
-                                 inclFilesInArchives: Boolean = true): Collection<FileLocation> {
+   fun loadFileLocationsForPaths(
+      mediumSerial: String?,
+      dirs: List<File>,
+      excludeIndexRunsWithFailures: Boolean = false,
+      inclFilesInArchives: Boolean = true
+   ): Collection<FileLocation> {
 
       val indexRunFilePathResults = dirs.mapNotNull { dir -> getNewestPath(mediumSerial, dir, excludeIndexRunsWithFailures) }
       if (indexRunFilePathResults.isEmpty()) return emptyList()
@@ -246,8 +254,10 @@ open class PersistenceLayer(db: Database) : PersistenceLayerBase(db) {
          .map { indexRunFilePathResult -> LoadFileLocations(indexRunFilePathResult, this).load(inclFilesInArchives) }
          // todo empty result can not be reduced!
          .reduce { fileLocations1, fileLocations2 ->
-            fileLocations1.union(fileLocations2,
-                                 MatchMode.HASH + MatchMode.FILE_SIZE + MatchMode.FULL_PATH_EXCL_PREFIX + MatchMode.FILENAME, true)
+            fileLocations1.union(
+               fileLocations2,
+               MatchMode.HASH + MatchMode.FILE_SIZE + MatchMode.FULL_PATH_EXCL_PREFIX + MatchMode.FILENAME, true
+            )
          }
    }
 }

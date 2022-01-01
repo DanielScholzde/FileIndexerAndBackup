@@ -33,15 +33,19 @@ class LoadFileLocations(private val toProcess: IndexRunFilePathResult, private v
 
    data class Condition<T>(val attribute: KProperty1<T, *>, val operator: Operator, val value: Any)
 
-   fun load(inclFilesInArchives: Boolean = true,
-            furtherConditions: List<Condition<FileLocation>> = listOf()): Collection<FileLocation> {
+   fun load(
+      inclFilesInArchives: Boolean = true,
+      furtherConditions: List<Condition<FileLocation>> = listOf()
+   ): Collection<FileLocation> {
       return load(toProcess.indexRun, toProcess.filePath, inclFilesInArchives, furtherConditions)
    }
 
-   private fun load(indexRun: IndexRun,
-                    filePath: FilePath,
-                    inclFilesInArchives: Boolean,
-                    furtherConditions: List<Condition<FileLocation>>): Collection<FileLocation> {
+   private fun load(
+      indexRun: IndexRun,
+      filePath: FilePath,
+      inclFilesInArchives: Boolean,
+      furtherConditions: List<Condition<FileLocation>>
+   ): Collection<FileLocation> {
 
       fun getFurtherConditions(): String {
          val inArchive = if (!inclFilesInArchives) " l.inArchive = ? AND\n" else ""
@@ -60,9 +64,10 @@ class LoadFileLocations(private val toProcess: IndexRunFilePathResult, private v
       }
 
       logger.debug("Load indexed Files from ${pl.getFullPath(indexRun, filePath.id)} " +
-                   "and Date ${indexRun.runDate.convertToLocalZone().toStr()} " +
-                   "and excluded Paths ${indexRun.excludedPaths.split('|').filter { !Config.INST.defaultExcludedPaths.contains(it) }.joinToString { "\"$it\"" }} " +
-                   "and Files ${indexRun.excludedFiles.split('|').filter { !Config.INST.defaultExcludedFiles.contains(it) }.joinToString { "\"$it\"" }}")
+                         "and Date ${indexRun.runDate.convertToLocalZone().toStr()} " +
+                         "and excluded Paths ${indexRun.excludedPaths.split('|').filter { !Config.INST.defaultExcludedPaths.contains(it) }.joinToString { "\"$it\"" }} " +
+                         "and Files ${indexRun.excludedFiles.split('|').filter { !Config.INST.defaultExcludedFiles.contains(it) }.joinToString { "\"$it\"" }}"
+      )
 
       val sql = """
 			SELECT

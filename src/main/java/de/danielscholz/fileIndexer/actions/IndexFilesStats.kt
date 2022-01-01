@@ -68,9 +68,11 @@ class IndexFilesStats(private var currentParallelReads: () -> String) {
    private fun updateInfoPanel() {
       calcProcessedMbPerSecond()
 
-      InfopanelSwing.setProgressTotal("${(indexedFilesSize.get() * 100 / filesSizeAll.ifZero(1))}% " +
-                                      "[${indexedFilesSize.get().formatAsFileSize()} / ${filesSizeAll.formatAsFileSize()}] " +
-                                      "[$indexedFilesCount / $filesCountAll]")
+      InfopanelSwing.setProgressTotal(
+         "${(indexedFilesSize.get() * 100 / filesSizeAll.ifZero(1))}% " +
+               "[${indexedFilesSize.get().formatAsFileSize()} / ${filesSizeAll.formatAsFileSize()}] " +
+               "[$indexedFilesCount / $filesCountAll]"
+      )
       InfopanelSwing.setDuration(getDuration())
       InfopanelSwing.setRemainingDuration(getEstimatedDuration())
       InfopanelSwing.setFastModeData(getFastModeStats())
@@ -83,8 +85,8 @@ class IndexFilesStats(private var currentParallelReads: () -> String) {
 
    private fun calcProcessedMbPerSecond() {
       processedMbPerSecond = indexedFilesSize.get() /
-                             ((System.currentTimeMillis() - timestampMillisBegin) / 1_000).ifZero(1) /
-                             1_000_000.0
+            ((System.currentTimeMillis() - timestampMillisBegin) / 1_000).ifZero(1) /
+            1_000_000.0
 //      try {
 //         val duration = (System.nanoTime() - startTime) / 1000 // microsec
 //         if (duration > 0) {
@@ -133,7 +135,7 @@ class IndexFilesStats(private var currentParallelReads: () -> String) {
    private fun getFastModeStats(): String {
       if (Global.stat.fastModeHitCount.get() > 0) {
          return ("" + (Global.stat.fastModeHitCount.get() * 100.0 /
-                       (Global.stat.fastModeHitCount.get() + Global.stat.notFastModeHitCount.get())).roundToInt()).leftPad(3) + "% Hits"
+               (Global.stat.fastModeHitCount.get() + Global.stat.notFastModeHitCount.get())).roundToInt()).leftPad(3) + "% Hits"
       }
       return "0% hits"
    }

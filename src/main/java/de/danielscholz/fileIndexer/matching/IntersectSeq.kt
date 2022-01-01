@@ -9,8 +9,10 @@ import java.util.*
  */
 class IntersectSeq(private val mode: EnumSet<MatchMode>, private val multimapMatching: Boolean) {
 
-   fun apply(collection1: Sequence<FileLocation>,
-             collection2: Sequence<FileLocation>): Sequence<Pair<FileLocation, FileLocation>> {
+   fun apply(
+      collection1: Sequence<FileLocation>,
+      collection2: Sequence<FileLocation>
+   ): Sequence<Pair<FileLocation, FileLocation>> {
 
       if (multimapMatching) {
          val collection1AsMultimap = mutableListMultimapOf<String, FileLocation>()

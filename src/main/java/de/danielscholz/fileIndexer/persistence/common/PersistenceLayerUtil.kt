@@ -2,7 +2,6 @@ package de.danielscholz.fileIndexer.persistence.common
 
 import de.danielscholz.fileIndexer.common.isNotEmpty
 import de.danielscholz.fileIndexer.persistence.*
-import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 import kotlin.reflect.full.findAnnotation
@@ -36,9 +35,11 @@ fun <T : EntityBase> getSqlAttributes(clazz: KClass<T>, prefix: String = ""): St
    return res
 }
 
-fun <T : EntityBase> processFilteredProperties(clazz: KClass<T>,
-                                               excludeId: Boolean = true,
-                                               process: (String, KProperty<*>) -> Unit) {
+fun <T : EntityBase> processFilteredProperties(
+   clazz: KClass<T>,
+   excludeId: Boolean = true,
+   process: (String, KProperty<*>) -> Unit
+) {
 //    val map = clazz.declaredMemberProperties.associateBy { it.name }
 //    for (attr in clazz.declaredMemberProperties) {
 //        if (attr.name.endsWith("Id") && map.containsKey(attr.name.removeSuffix("Id"))) {

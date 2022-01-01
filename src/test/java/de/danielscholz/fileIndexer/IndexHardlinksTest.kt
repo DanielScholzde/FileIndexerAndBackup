@@ -43,12 +43,16 @@ class IndexHardlinksTest : BaseTest() {
 
       main(arrayOf(Commands.INDEX_FILES.command, "--db", dbname, "--progressWindow:no", "$root/test2/001/"))
 
-      main(arrayOf(Commands.INDEX_FILES.command,
-                   "--db", dbname,
-                   "--progressWindow:no",
-                   "--updateHardlinksInLastIndex",
-                   "--lastIndexDir", "$root/test2/001/",
-                   "$root/test2/002/")) { pl ->
+      main(
+         arrayOf(
+            Commands.INDEX_FILES.command,
+            "--db", dbname,
+            "--progressWindow:no",
+            "--updateHardlinksInLastIndex",
+            "--lastIndexDir", "$root/test2/001/",
+            "$root/test2/002/"
+         )
+      ) { pl ->
 
          assertEquals(2, pl.db.dbQueryUniqueInt("SELECT count(*) FROM FileLocation"))
          assertEquals(1, pl.db.dbQueryUniqueInt("SELECT count(*) FROM FileContent"))
@@ -72,11 +76,15 @@ class IndexHardlinksTest : BaseTest() {
 
       createHardlink("$root/test2/001/a.txt", "$root/test2/002/aa.txt")
 
-      main(arrayOf(Commands.INDEX_FILES.command,
-                   "--db", dbname,
-                   "--progressWindow:no",
-                   "--lastIndexDir", "$root/test2/001/",
-                   "$root/test2/002/")) { pl ->
+      main(
+         arrayOf(
+            Commands.INDEX_FILES.command,
+            "--db", dbname,
+            "--progressWindow:no",
+            "--lastIndexDir", "$root/test2/001/",
+            "$root/test2/002/"
+         )
+      ) { pl ->
 
          assertEquals(2, pl.db.dbQueryUniqueInt("SELECT count(*) FROM FileLocation"))
          assertEquals(1, pl.db.dbQueryUniqueInt("SELECT count(*) FROM FileContent"))
@@ -101,11 +109,15 @@ class IndexHardlinksTest : BaseTest() {
       createHardlink("$root/test2/001/a.txt", "$root/test2/002/aa.txt")
       createHardlink("$root/test2/001/a.txt", "$root/test2/002/aaa.txt")
 
-      main(arrayOf(Commands.INDEX_FILES.command,
-                   "--db", dbname,
-                   "--progressWindow:no",
-                   "--lastIndexDir", "$root/test2/001/",
-                   "$root/test2/002/")) { pl ->
+      main(
+         arrayOf(
+            Commands.INDEX_FILES.command,
+            "--db", dbname,
+            "--progressWindow:no",
+            "--lastIndexDir", "$root/test2/001/",
+            "$root/test2/002/"
+         )
+      ) { pl ->
 
          assertEquals(3, pl.db.dbQueryUniqueInt("SELECT count(*) FROM FileLocation"))
          assertEquals(1, pl.db.dbQueryUniqueInt("SELECT count(*) FROM FileContent"))

@@ -162,8 +162,8 @@ open class BaseTest(val dbname: String = "target/test-classes/test.db") {
       val parent = canonFile!!.parentFile
 
       return parent != null &&
-             (parent.myMkdirs() || parent.exists()) &&
-             canonFile.myMkdir()
+            (parent.myMkdirs() || parent.exists()) &&
+            canonFile.myMkdir()
    }
 
 }

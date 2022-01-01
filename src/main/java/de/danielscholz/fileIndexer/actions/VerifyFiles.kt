@@ -62,20 +62,26 @@ class VerifyFiles(private val pl: PersistenceLayer, private val doPrintln: Boole
    }
 
    private fun verifyFile(file: File, fileLocation: FileLocation): Boolean {
-      val attributes = Files.readAttributes(file.toPath(),
-                                            BasicFileAttributes::class.java,
-                                            LinkOption.NOFOLLOW_LINKS)
+      val attributes = Files.readAttributes(
+         file.toPath(),
+         BasicFileAttributes::class.java,
+         LinkOption.NOFOLLOW_LINKS
+      )
 
-      return verifyFile(attributes.lastModifiedTime().toInstant(),
-                        attributes.size(),
-                        fileLocation,
-                        file)
+      return verifyFile(
+         attributes.lastModifiedTime().toInstant(),
+         attributes.size(),
+         fileLocation,
+         file
+      )
    }
 
-   private fun verifyFile(modified: Instant,
-                          fileSize: Long,
-                          fileLocation: FileLocation,
-                          file: File): Boolean {
+   private fun verifyFile(
+      modified: Instant,
+      fileSize: Long,
+      fileLocation: FileLocation,
+      file: File
+   ): Boolean {
       if (fileSize == fileLocation.fileContent!!.fileSize) {
          if (modified == fileLocation.modified) {
             if (Config.INST.fastMode && Config.INST.ignoreHashInFastMode) {

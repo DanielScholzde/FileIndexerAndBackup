@@ -17,59 +17,70 @@ class ImportOldDatabase(val pl: PersistenceLayer, val oldDbFile: File, val mediu
    private val logger = LoggerFactory.getLogger(this.javaClass)
 
 
-   data class OldBackupRun(override var id: Long,
-                           @NoDbProperty
-                           override var pl: PersistenceLayer,
-                           var pathPrefix: String,
-                           var backupDate: Long) : EntityBase
+   data class OldBackupRun(
+      override var id: Long,
+      @NoDbProperty
+      override var pl: PersistenceLayer,
+      var pathPrefix: String,
+      var backupDate: Long
+   ) : EntityBase
 
-   data class OldBackupPath(override var id: Long,
-                            @NoDbProperty
-                            override var pl: PersistenceLayer,
-                            @CustomCharset("iso-8859-1")
-                            var path: String) : EntityBase
+   data class OldBackupPath(
+      override var id: Long,
+      @NoDbProperty
+      override var pl: PersistenceLayer,
+      @CustomCharset("iso-8859-1")
+      var path: String
+   ) : EntityBase
 
-   data class OldFileContent(override var id: Long,
-                             @NoDbProperty
-                             override var pl: PersistenceLayer,
-                             var fileSize: Long,
-                             var modified: Long,
-                             val sha1: String) : EntityBase
+   data class OldFileContent(
+      override var id: Long,
+      @NoDbProperty
+      override var pl: PersistenceLayer,
+      var fileSize: Long,
+      var modified: Long,
+      val sha1: String
+   ) : EntityBase
 
-   data class OldLocation(override var id: Long,
-                          @NoDbProperty
-                          override var pl: PersistenceLayer,
-                          var fileContentId: Long,
-                          var backupPathId: Long,
-                          var backupRunId: Long,
-                          @CustomCharset("iso-8859-1")
-                          var filename: String,
-                          @NoDbProperty
-                          var fileContent: OldFileContent? = null,
-                          @NoDbProperty
-                          var backupPath: OldBackupPath? = null) : EntityBase
+   data class OldLocation(
+      override var id: Long,
+      @NoDbProperty
+      override var pl: PersistenceLayer,
+      var fileContentId: Long,
+      var backupPathId: Long,
+      var backupRunId: Long,
+      @CustomCharset("iso-8859-1")
+      var filename: String,
+      @NoDbProperty
+      var fileContent: OldFileContent? = null,
+      @NoDbProperty
+      var backupPath: OldBackupPath? = null
+   ) : EntityBase
 
 
    class OldPersistenceLayer(db: Database) : PersistenceLayer(db) {
 
       fun getAllBackupRuns(): List<OldBackupRun> {
          return db.dbQuery(
-               "SELECT ${getSqlAttributes(OldBackupRun::class, "r")}" +
-               " FROM BackupRun r " +
-               " ORDER BY r.backupDate ASC ") { // oldest first
+            "SELECT ${getSqlAttributes(OldBackupRun::class, "r")}" +
+                  " FROM BackupRun r " +
+                  " ORDER BY r.backupDate ASC "
+         ) { // oldest first
             extractToEntity(OldBackupRun::class, it, "r")!!
          }
       }
 
       fun getAllLocations(backupRunId: Long): List<OldLocation> {
-         return db.dbQuery("SELECT ${getSqlAttributes(OldLocation::class, "l")}, " +
-                           "${getSqlAttributes(OldFileContent::class, "c")}, " +
-                           "${getSqlAttributes(OldBackupPath::class, "p")} " +
-                           "FROM FileLocation l " +
-                           "     left outer join FileContent c on (l.fileContent_id = c.id) " +
-                           "     join BackupPath p on (l.backupPath_id = p.id) " +
-                           "WHERE l.backupRun_id = ? " +
-                           "ORDER BY p.path, l.filename ", listOf(backupRunId)) {
+         return db.dbQuery(
+            "SELECT ${getSqlAttributes(OldLocation::class, "l")}, " +
+                  "${getSqlAttributes(OldFileContent::class, "c")}, " +
+                  "${getSqlAttributes(OldBackupPath::class, "p")} " +
+                  "FROM FileLocation l " +
+                  "     left outer join FileContent c on (l.fileContent_id = c.id) " +
+                  "     join BackupPath p on (l.backupPath_id = p.id) " +
+                  "WHERE l.backupRun_id = ? " +
+                  "ORDER BY p.path, l.filename ", listOf(backupRunId)
+         ) {
             val location = extractToEntity(OldLocation::class, it, "l")!!
             location.backupPath = extractToEntity(OldBackupPath::class, it, "p")!!
             location.fileContent = extractToEntity(OldFileContent::class, it, "c")!!
@@ -127,9 +138,11 @@ class ImportOldDatabase(val pl: PersistenceLayer, val oldDbFile: File, val mediu
       val fileLocationMap = mutableListMultimapOf<String, FileLocation>()
 
       // selects only files with file size > 0
-      pl.db.dbQuery("SELECT ${getFileLocationSqlAttr("l")}, c.hash as hash, c.fileSize as fileSize " +
-                    "FROM FileLocation l join FileContent c on (l.fileContent_id = c.id) join IndexRun r on (r.id = l.indexRun_id) " +
-                    "WHERE r.isBackup = 1 ") {
+      pl.db.dbQuery(
+         "SELECT ${getFileLocationSqlAttr("l")}, c.hash as hash, c.fileSize as fileSize " +
+               "FROM FileLocation l join FileContent c on (l.fileContent_id = c.id) join IndexRun r on (r.id = l.indexRun_id) " +
+               "WHERE r.isBackup = 1 "
+      ) {
          val fileLocation = pl.extractFileLocation(it, "l")!!
          val fileSize = it.getLong("fileSize")
          val hash = it.getString("hash")
@@ -144,11 +157,13 @@ class ImportOldDatabase(val pl: PersistenceLayer, val oldDbFile: File, val mediu
       }
    }
 
-   private fun importBackupRun(backupRun: OldBackupRun,
-                               indexRunMap: MutableMap<String, IndexRun>,
-                               fileContentMap: MutableMap<String, Long>,
-                               fileLocationMap: ListMultimap<String, FileLocation>,
-                               oldPl: OldPersistenceLayer) {
+   private fun importBackupRun(
+      backupRun: OldBackupRun,
+      indexRunMap: MutableMap<String, IndexRun>,
+      fileContentMap: MutableMap<String, Long>,
+      fileLocationMap: ListMultimap<String, FileLocation>,
+      oldPl: OldPersistenceLayer
+   ) {
 
       val fileLocationsConstrainsExisting = HashSet<String>()
       val dir = File(oldDbFile.parent + backupRun.pathPrefix.ensurePrefix("/")) // pathPrefix ist nur Datum, d.h. "2000-01-02"
@@ -164,29 +179,32 @@ class ImportOldDatabase(val pl: PersistenceLayer, val oldDbFile: File, val mediu
 
       val mediumSerialDetermined = getVolumeSerialNr(dir, mediumSerial)
 
-      var indexRun = IndexRun(0,
-                              pl,
-                              filePath.id,
-                              pathWithoutPrefix,
-                              calcFilePathPrefix(dir),
-                              "",
-                              "",
-                              "",
-                              mediumDescription,
-                              mediumSerialDetermined,
-                              false,
-                              (backupRun.backupDate * 1000).toInstant(),
-                              false,
-                              true,
-                              null,
-                              0,
-                              0,
-                              true)
+      var indexRun = IndexRun(
+         0,
+         pl,
+         filePath.id,
+         pathWithoutPrefix,
+         calcFilePathPrefix(dir),
+         "",
+         "",
+         "",
+         mediumDescription,
+         mediumSerialDetermined,
+         false,
+         (backupRun.backupDate * 1000).toInstant(),
+         false,
+         true,
+         null,
+         0,
+         0,
+         true
+      )
       val indexRunKey = getIndexRunKey(indexRun)
       if (indexRunMap.containsKey(indexRunKey)) {
          val indexRun_ = indexRunMap[indexRunKey]!!
          if (indexRun.mediumSerial != indexRun_.mediumSerial ||
-             indexRun.filePathId != indexRun_.filePathId) {
+            indexRun.filePathId != indexRun_.filePathId
+         ) {
             logger.error("IndexRun is different!!")
             return
          }
@@ -230,12 +248,15 @@ class ImportOldDatabase(val pl: PersistenceLayer, val oldDbFile: File, val mediu
          if (location.fileContent!!.fileSize > 0) {
             if (fileContentId == null) {
                fileContentId = pl.insertIntoFileContent(
-                     FileContent(0,
-                                 pl,
-                                 location.fileContent!!.fileSize,
-                                 location.fileContent!!.sha1,
-                                 location.fileContent!!.sha1.getSha1Chunk(),
-                                 location.fileContent!!.sha1.getSha1Chunk())).id
+                  FileContent(
+                     0,
+                     pl,
+                     location.fileContent!!.fileSize,
+                     location.fileContent!!.sha1,
+                     location.fileContent!!.sha1.getSha1Chunk(),
+                     location.fileContent!!.sha1.getSha1Chunk()
+                  )
+               ).id
 
                fileContentMap[key] = fileContentId!!
             } else {
@@ -257,9 +278,11 @@ class ImportOldDatabase(val pl: PersistenceLayer, val oldDbFile: File, val mediu
             }
          }
 
-         val attributes = Files.readAttributes(fileOld.toPath(),
-                                               BasicFileAttributes::class.java,
-                                               LinkOption.NOFOLLOW_LINKS)
+         val attributes = Files.readAttributes(
+            fileOld.toPath(),
+            BasicFileAttributes::class.java,
+            LinkOption.NOFOLLOW_LINKS
+         )
 
          val modified = (location.fileContent!!.modified * 1000).toInstant()
          val currentModified = attributes.lastModifiedTime().toInstant()
@@ -274,18 +297,21 @@ class ImportOldDatabase(val pl: PersistenceLayer, val oldDbFile: File, val mediu
          }
 
          val fileLocation = pl.insertIntoFileLocation(
-               FileLocation(0,
-                            pl,
-                            fileContentId,
-                            filePathId,
-                            indexRunId,
-                            location.filename,
-                            location.filename.getFileExtension(),
-                            created,
-                            modified,
-                            false,
-                            false,
-                            inode))
+            FileLocation(
+               0,
+               pl,
+               fileContentId,
+               filePathId,
+               indexRunId,
+               location.filename,
+               location.filename.getFileExtension(),
+               created,
+               modified,
+               false,
+               false,
+               inode
+            )
+         )
 
          if (location.fileContent!!.fileSize > 0) {
             fileLocationMap[key] = fileLocation

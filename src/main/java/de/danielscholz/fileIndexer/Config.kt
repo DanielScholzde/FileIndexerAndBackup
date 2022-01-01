@@ -13,12 +13,16 @@ class Config {
 
    var timeZone: TimeZone = TimeZone.getDefault()
 
-   @Description("Part of filename (without path). To exclude files by extension, use: \".jpg/\"\n" +
-                "Hint: a full filename is matched by \"/name/\" (enclosed by /). If the underlying filesystem is case-sensitive, these entries are also.")
+   @Description(
+      "Part of filename (without path). To exclude files by extension, use: \".jpg/\"\n" +
+            "Hint: a full filename is matched by \"/name/\" (enclosed by /). If the underlying filesystem is case-sensitive, these entries are also."
+   )
    var excludedFiles: Set<String> = setOf()
 
-   @Description("Part of path (without filename) OR absolute path. Separator char is \"/\". An absolute path is defined by starting with \"//\", e.g. \"//absolute/path/\"\n" +
-                "Hint: a full directory name is matched by \"/name/\" (enclosed by /). If the underlying filesystem is case-sensitive, these entries are also.")
+   @Description(
+      "Part of path (without filename) OR absolute path. Separator char is \"/\". An absolute path is defined by starting with \"//\", e.g. \"//absolute/path/\"\n" +
+            "Hint: a full directory name is matched by \"/name/\" (enclosed by /). If the underlying filesystem is case-sensitive, these entries are also."
+   )
    var excludedPaths: Set<String> = setOf()
 
    val defaultExcludedFiles = setOf("/thumbs.db/", "/desktop.ini/")

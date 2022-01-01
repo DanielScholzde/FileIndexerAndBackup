@@ -42,11 +42,12 @@ class DeleteFiles {
                         deleteConfirmationExists = true
                      } else {
                         deleteConfirmationExists = JOptionPane.showConfirmDialog(
-                              null,
-                              "All ${files.size} files will be deleted.\n" +
-                              "Do you want to proceed?",
-                              "Confirmation",
-                              JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION
+                           null,
+                           "All ${files.size} files will be deleted.\n" +
+                                 "Do you want to proceed?",
+                           "Confirmation",
+                           JOptionPane.YES_NO_OPTION
+                        ) == JOptionPane.YES_OPTION
                      }
                   }
                   if (deleteConfirmationExists) {
@@ -66,9 +67,11 @@ class DeleteFiles {
             }
          }
 
-         logger.info(it.first + it.second +
-                     (if (deleted) " deleted" else "") +
-                     (if (deleteFailed) " delete FAILED" + (if (!fileExists) " (File doesn't exists)" else "") else ""))
+         logger.info(
+            it.first + it.second +
+                  (if (deleted) " deleted" else "") +
+                  (if (deleteFailed) " delete FAILED" + (if (!fileExists) " (File doesn't exists)" else "") else "")
+         )
       }
       logger.info("")
 

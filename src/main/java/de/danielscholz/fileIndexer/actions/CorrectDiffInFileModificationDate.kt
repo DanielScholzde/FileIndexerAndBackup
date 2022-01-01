@@ -50,13 +50,17 @@ class CorrectDiffInFileModificationDate(private val pl: PersistenceLayer) {
             val str = if (corrected) " (date/time corrected)" else ""
 
             if (Config.INST.verbose) {
-               logger.info(it.first.getMediumDescrFullFilePathAndOtherData() + " " + it.first.modified.convertToLocalZone().toStr() +
-                           " <==> " +
-                           it.second.getMediumDescrFullFilePathAndOtherData() + it.second.modified.convertToLocalZone().toStr() + str)
+               logger.info(
+                  it.first.getMediumDescrFullFilePathAndOtherData() + " " + it.first.modified.convertToLocalZone().toStr() +
+                        " <==> " +
+                        it.second.getMediumDescrFullFilePathAndOtherData() + it.second.modified.convertToLocalZone().toStr() + str
+               )
             } else {
-               logger.info(it.first.getFullFilePath() + " " + it.first.modified.convertToLocalZone().toStr() + "" +
-                           " <==> " +
-                           it.second.getFullFilePath() + it.second.modified.convertToLocalZone().toStr() + str)
+               logger.info(
+                  it.first.getFullFilePath() + " " + it.first.modified.convertToLocalZone().toStr() + "" +
+                        " <==> " +
+                        it.second.getFullFilePath() + it.second.modified.convertToLocalZone().toStr() + str
+               )
             }
             count.incrementAndGet()
          }

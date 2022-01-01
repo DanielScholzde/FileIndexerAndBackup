@@ -45,7 +45,6 @@ object ImgUtils {
       return ImgAttr(date?.toInstant(), width, height)
    }
 
-   @ExperimentalUnsignedTypes
    fun extractThumbnail(imgBytes: ByteArray): ByteArray? {
       var thumbnail: ByteArray? = null
       var i = -1
@@ -53,8 +52,9 @@ object ImgUtils {
          i++
          if (imgBytes[i] == 0xFF.toByte()) {
             if (imgBytes[i + 1] == 0xD8.toByte()
-                && i + 2 < imgBytes.size
-                && imgBytes[i + 2] == 0xFF.toByte()) {
+               && i + 2 < imgBytes.size
+               && imgBytes[i + 2] == 0xFF.toByte()
+            ) {
                val img = tryExtractImg(imgBytes, i)
                if (img != null) {
                   if (thumbnail == null || thumbnail.size < img.size) {
@@ -68,7 +68,6 @@ object ImgUtils {
       return thumbnail
    }
 
-   @ExperimentalUnsignedTypes
    fun tryExtractImg(imgBytes: ByteArray, begin: Int): ByteArray? {
       var i = begin + 2
       var j = -1
@@ -108,7 +107,8 @@ object ImgUtils {
       // within body of JPG
       while (j < imgBytes.size - 2) {
          if (imgBytes[j].toUByte() == 0xff.toUByte()
-             && imgBytes[j + 1].toUByte() == 0xd9.toUByte()) {
+            && imgBytes[j + 1].toUByte() == 0xd9.toUByte()
+         ) {
             if (w in 1..20_000 && h in 1..20_000) {
                return imgBytes.copyOfRange(begin, j + 2)
             }

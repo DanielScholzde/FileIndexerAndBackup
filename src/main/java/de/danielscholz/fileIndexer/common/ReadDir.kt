@@ -9,8 +9,9 @@ import java.nio.file.LinkOption
 import java.nio.file.attribute.BasicFileAttributes
 
 data class FolderResult(
-      val folders: List<Pair<File, List<Path>>>,
-      val files: List<File>)
+   val folders: List<Pair<File, List<Path>>>,
+   val files: List<File>
+)
 
 private val logger = LoggerFactory.getLogger("ReadDir")
 
@@ -71,17 +72,20 @@ private fun matchesPath(name: String, includePaths: List<Path>, caseSensitive: B
 
 fun readAllDirInfos(dir: File, scanArchiveContents: Boolean, includePaths: List<String> = listOf()): DirInfosResult {
 
-   val result = DirInfosResult(0,
-                               0,
-                               isCaseSensitiveFileSystem(dir) ?: throw Exception("Unable to determine if filesystem is case sensitive!"),
-                               Excluded(mutableSetOf(), mutableSetOf()))
+   val result = DirInfosResult(
+      0,
+      0,
+      isCaseSensitiveFileSystem(dir) ?: throw Exception("Unable to determine if filesystem is case sensitive!"),
+      Excluded(mutableSetOf(), mutableSetOf())
+   )
 
    logger.info("Read all files of directory (incl. subdirectories): $dir [" +
-               "included paths: " + (if (includePaths.isEmpty()) "*" else includePaths.joinToString { "\"$it\"" }) + ", " +
-               "excluded " +
-               "paths: ${Config.INST.excludedPaths.filter { !Config.INST.defaultExcludedPaths.contains(it) }.joinToString { "\"$it\"" }} " +
-               "files: ${Config.INST.excludedFiles.filter { !Config.INST.defaultExcludedFiles.contains(it) }.joinToString { "\"$it\"" }}" +
-               "]")
+                     "included paths: " + (if (includePaths.isEmpty()) "*" else includePaths.joinToString { "\"$it\"" }) + ", " +
+                     "excluded " +
+                     "paths: ${Config.INST.excludedPaths.filter { !Config.INST.defaultExcludedPaths.contains(it) }.joinToString { "\"$it\"" }} " +
+                     "files: ${Config.INST.excludedFiles.filter { !Config.INST.defaultExcludedFiles.contains(it) }.joinToString { "\"$it\"" }}" +
+                     "]"
+   )
 
    fun readDirIntern(dir: File, includePaths: List<Path>) {
       val filesAndDirs = dir.listFiles()
@@ -101,14 +105,14 @@ fun readAllDirInfos(dir: File, scanArchiveContents: Boolean, includePaths: List<
                   var archiveRead = false
                   if (scanArchiveContents && fileEntry.extension.lowercase() in Config.INST.archiveExtensions) {
                      archiveRead = processArchive(
-                           fileEntry,
-                           { _, archiveEntry ->
-                              result.files += 1
-                              result.size += archiveEntry.size
-                           },
-                           { exception ->
-                              logger.warn("ERROR: $fileEntry: Content of archive could not be read. {}: {}", exception.javaClass.simpleName, exception.message)
-                           }
+                        fileEntry,
+                        { _, archiveEntry ->
+                           result.files += 1
+                           result.size += archiveEntry.size
+                        },
+                        { exception ->
+                           logger.warn("ERROR: $fileEntry: Content of archive could not be read. {}: {}", exception.javaClass.simpleName, exception.message)
+                        }
                      )
                   }
 
@@ -184,7 +188,8 @@ fun isCaseSensitiveFileSystem(dir: File): Boolean? {
          if (fileEntry.isDirectory) {
             if (name.lowercase() != name.uppercase()) {
                if (File(fileEntry.path.lowercase()).isDirectory &&
-                   File(fileEntry.path.uppercase()).isDirectory) {
+                  File(fileEntry.path.uppercase()).isDirectory
+               ) {
                   return false
                }
                return true
@@ -193,7 +198,8 @@ fun isCaseSensitiveFileSystem(dir: File): Boolean? {
          } else {
             if (name.lowercase() != name.uppercase()) {
                if (File(fileEntry.path.lowercase()).isFile &&
-                   File(fileEntry.path.uppercase()).isFile) {
+                  File(fileEntry.path.uppercase()).isFile
+               ) {
                   return false
                }
                return true

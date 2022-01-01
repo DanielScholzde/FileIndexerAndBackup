@@ -26,7 +26,8 @@ class FilePathCache(val pl: PersistenceLayer) {
          var parentFilePath = getFilePath(Queries.filePathRootId)
          for ((dirName, path) in splitPath(dir)) {
             parentFilePath = searchOrInsertFilePath(
-                  FilePath(0, pl, parentFilePath.id, path, dirName, parentFilePath.depth + 1))
+               FilePath(0, pl, parentFilePath.id, path, dirName, parentFilePath.depth + 1)
+            )
          }
          return parentFilePath
       }

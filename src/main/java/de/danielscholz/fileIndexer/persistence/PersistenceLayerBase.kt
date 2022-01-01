@@ -7,7 +7,6 @@ import de.danielscholz.fileIndexer.persistence.common.CustomCharset
 import de.danielscholz.fileIndexer.persistence.common.Database
 import de.danielscholz.fileIndexer.persistence.common.EntityBase
 import de.danielscholz.fileIndexer.persistence.common.processFilteredProperties
-import java.lang.IllegalStateException
 import java.lang.ref.WeakReference
 import java.nio.charset.Charset
 import java.sql.ResultSet
@@ -18,23 +17,26 @@ import kotlin.reflect.full.findAnnotation
 open class PersistenceLayerBase(val db: Database) {
 
    private class Types(
-         var boolean: Boolean,
-         var booleanN: Boolean?,
-         var instant: Instant,
-         var instantN: Instant?,
-         var long: Long,
-         var longN: Long?,
-         var string: String,
-         var stringN: String?,
-         var int: Int,
-         var intN: Int?)
+      var boolean: Boolean,
+      var booleanN: Boolean?,
+      var instant: Instant,
+      var instantN: Instant?,
+      var long: Long,
+      var longN: Long?,
+      var string: String,
+      var stringN: String?,
+      var int: Int,
+      var intN: Int?
+   )
 
-   private val nativeSqlTypes = listOf(Types::string.returnType,
-                                       Types::stringN.returnType,
-                                       Types::long.returnType,
-                                       Types::longN.returnType,
-                                       Types::int.returnType,
-                                       Types::intN.returnType)
+   private val nativeSqlTypes = listOf(
+      Types::string.returnType,
+      Types::stringN.returnType,
+      Types::long.returnType,
+      Types::longN.returnType,
+      Types::int.returnType,
+      Types::intN.returnType
+   )
 
    private val entityCache = syncronizedMutableMapOf<Pair<KClass<out EntityBase>, Long>, WeakReference<out EntityBase>>()
 
@@ -120,7 +122,7 @@ open class PersistenceLayerBase(val db: Database) {
       validator(entity)
       val (sqlPropNames, sqlPropValues) = getSqlPropertyNamesAndValues(entity, clazz)
       val sql = "INSERT INTO ${clazz.simpleName} (${sqlPropNames.joinToString()}) " +
-                "VALUES (${",?".repeat(sqlPropNames.size).substring(1)})"
+            "VALUES (${",?".repeat(sqlPropNames.size).substring(1)})"
       entity.id = db.dbExec(sql, sqlPropValues)
       entityCache[Pair(entity::class, entity.id)] = WeakReference(entity)
       return entity
@@ -133,10 +135,12 @@ open class PersistenceLayerBase(val db: Database) {
       validator(entity)
       val (sqlPropNames, sqlPropValues) = getSqlPropertyNamesAndValues(entity, clazz)
       sqlPropValues.add(entity.id)
-      db.dbExec("UPDATE ${clazz.simpleName} " +
-                "SET ${sqlPropNames.joinToString(" = ?, ", postfix = " = ?")} " +
-                "WHERE id = ?",
-                sqlPropValues)
+      db.dbExec(
+         "UPDATE ${clazz.simpleName} " +
+               "SET ${sqlPropNames.joinToString(" = ?, ", postfix = " = ?")} " +
+               "WHERE id = ?",
+         sqlPropValues
+      )
       return entity
    }
 

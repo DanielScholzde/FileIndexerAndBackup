@@ -27,10 +27,12 @@ class FilterFiles {
                .replace(".", "\\.")
                .replace("?", "\\?")
 
-            regex = Regex(pathFilterEscaped
-                             .replace("**", "@@@@@@@@")
-                             .replace("*", "[^/]*")
-                             .replace("@@@@@@@@", ".*"))
+            regex = Regex(
+               pathFilterEscaped
+                  .replace("**", "@@@@@@@@")
+                  .replace("*", "[^/]*")
+                  .replace("@@@@@@@@", ".*")
+            )
          }
       }
 

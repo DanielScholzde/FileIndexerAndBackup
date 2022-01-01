@@ -1,6 +1,9 @@
 package de.danielscholz.fileIndexer
 
-import de.danielscholz.fileIndexer.common.*
+import de.danielscholz.fileIndexer.common.ByteArrayInputStreamWrapperImpl
+import de.danielscholz.fileIndexer.common.ChecksumCreator
+import de.danielscholz.fileIndexer.common.convertToLocalZone
+import de.danielscholz.fileIndexer.common.transaction
 import de.danielscholz.fileIndexer.persistence.FileContent
 import de.danielscholz.fileIndexer.persistence.FileLocation
 import de.danielscholz.fileIndexer.persistence.IndexRun
@@ -39,51 +42,60 @@ class IndexTest : BaseTest() {
       fun test(pl: PersistenceLayer) {
          val start = System.currentTimeMillis()
          val indexRun = pl.insertIntoIndexRun(
-               IndexRun(0,
-                        pl,
-                        filePathRootId,
-                        "/dsfgdg/",
-                        "C:",
-                        "",
-                        "",
-                        "",
-                        null,
-                        null,
-                        false,
-                        Instant.now(),
-                        false,
-                        false,
-                        null,
-                        0,
-                        0,
-                        false))
+            IndexRun(
+               0,
+               pl,
+               filePathRootId,
+               "/dsfgdg/",
+               "C:",
+               "",
+               "",
+               "",
+               null,
+               null,
+               false,
+               Instant.now(),
+               false,
+               false,
+               null,
+               0,
+               0,
+               false
+            )
+         )
 
          val max = 20_000
 
          for (i in 1..max) {
             val fileContent = pl.insertIntoFileContent(
-                  FileContent(0,
-                              pl,
-                              i.toLong(),
-                              "fhslfjasdfkljasdfkljaslfkjasf$i",
-                              "lkasdfkjHAFDJHKbfdkjgasdfhkgasdfhgaddfhjgadfjhgadfkjadhfkajsdfhadsdkfjhakfdjhafdhkadf",
-                              "ladfjlkafdhgkjsfdghafkghafghafjkghafgjhafdjghffgkjfdhgaaskdjfhaskdjfhhadsfkjhakjfgkh"))
+               FileContent(
+                  0,
+                  pl,
+                  i.toLong(),
+                  "fhslfjasdfkljasdfkljaslfkjasf$i",
+                  "lkasdfkjHAFDJHKbfdkjgasdfhkgasdfhgaddfhjgadfjhgadfkjadhfkajsdfhadsdkfjhakfdjhafdhkadf",
+                  "ladfjlkafdhgkjsfdghafkghafghafjkghafgjhafdjghffgkjfdhgaaskdjfhaskdjfhhadsfkjhakjfgkh"
+               )
+            )
 
             pl.insertIntoFileLocation(
-                  FileLocation(0,
-                               pl,
-                               fileContent.id,
-                               filePathRootId,
-                               indexRun.id,
-                               "filename$i.txt",
-                               "txt",
-                               Instant.now(),
-                               Instant.now(),
-                               false,
-                               false,
-                               null,
-                               indexRun,
-                               fileContent))
+               FileLocation(
+                  0,
+                  pl,
+                  fileContent.id,
+                  filePathRootId,
+                  indexRun.id,
+                  "filename$i.txt",
+                  "txt",
+                  Instant.now(),
+                  Instant.now(),
+                  false,
+                  false,
+                  null,
+                  indexRun,
+                  fileContent
+               )
+            )
          }
 
          println("Inserts/Sek.: " + (max / ((System.currentTimeMillis() - start) / 1000.0)).toInt())

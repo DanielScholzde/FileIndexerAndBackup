@@ -5,15 +5,18 @@ import de.danielscholz.fileIndexer.Global
 import java.io.File
 import kotlin.math.min
 
-class ChecksumCreator(private val inputStreamWrapper: InputStreamWrapper,
-                      private val fileSize: Long,
-                      private val file: File? = null,
-                      private val byteArray: ByteArray? = null) {
+class ChecksumCreator(
+   private val inputStreamWrapper: InputStreamWrapper,
+   private val fileSize: Long,
+   private val file: File? = null,
+   private val byteArray: ByteArray? = null
+) {
 
    data class Checksum(
-         val sha1: String,
-         val sha1ChunksFromBeginning: List<String>,
-         val sha1ChunksFromEnd: List<String>)
+      val sha1: String,
+      val sha1ChunksFromBeginning: List<String>,
+      val sha1ChunksFromEnd: List<String>
+   )
 
    private val chunkCreator = ChunkCreator(fileSize)
    private val buffer = ByteArray(512 * 1024)

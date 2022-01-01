@@ -10,8 +10,10 @@ import kotlin.math.min
  */
 class Intersect(val mode: EnumSet<MatchMode>, private val multimapMatching: Boolean) {
 
-   fun apply(collection1: Collection<FileLocation>,
-             collection2: Collection<FileLocation>): List<Pair<FileLocation, FileLocation>> {
+   fun apply(
+      collection1: Collection<FileLocation>,
+      collection2: Collection<FileLocation>
+   ): List<Pair<FileLocation, FileLocation>> {
 
       val result = mutableListOf<Pair<FileLocation, FileLocation>>()
       if (result is ArrayList) {

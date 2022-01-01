@@ -58,13 +58,17 @@ class RenameFilesToModificationDate(private val pl: PersistenceLayer) {
             }
 
             if (Config.INST.verbose) {
-               logger.info(it.getMediumDescrFullFilePathAndOtherData() + " " + it.modified.convertToLocalZone().toStr() +
-                           " <==> " +
-                           newFilename + str)
+               logger.info(
+                  it.getMediumDescrFullFilePathAndOtherData() + " " + it.modified.convertToLocalZone().toStr() +
+                        " <==> " +
+                        newFilename + str
+               )
             } else {
-               logger.info(it.getFullFilePath() + " " + it.modified.convertToLocalZone().toStr() +
-                           " <==> " +
-                           newFilename + str)
+               logger.info(
+                  it.getFullFilePath() + " " + it.modified.convertToLocalZone().toStr() +
+                        " <==> " +
+                        newFilename + str
+               )
             }
             count.incrementAndGet()
          }
@@ -88,8 +92,8 @@ class RenameFilesToModificationDate(private val pl: PersistenceLayer) {
 
    private fun createFilename(it: FileLocation): String {
       return it.modified.ignoreMillis().convertToLocalZone().toStrSys()
-                .replace(Regex("[:]"), "")
-                .replace('-', '_') + "." + it.extension
+         .replace(Regex("[:]"), "")
+         .replace('-', '_') + "." + it.extension
    }
 
 }

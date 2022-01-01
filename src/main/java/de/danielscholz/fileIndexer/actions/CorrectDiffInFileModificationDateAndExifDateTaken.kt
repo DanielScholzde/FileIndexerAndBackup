@@ -72,13 +72,17 @@ class CorrectDiffInFileModificationDateAndExifDateTaken(private val pl: Persiste
             }
 
             if (Config.INST.verbose) {
-               logger.info(it.getMediumDescrFullFilePathAndOtherData() + " " + it.modified.convertToLocalZone().toStr() +
-                           " <==> " +
-                           it.fileContent?.fileMeta?.imgExifOriginalDate?.convertToLocalZone()?.toStr() + str)
+               logger.info(
+                  it.getMediumDescrFullFilePathAndOtherData() + " " + it.modified.convertToLocalZone().toStr() +
+                        " <==> " +
+                        it.fileContent?.fileMeta?.imgExifOriginalDate?.convertToLocalZone()?.toStr() + str
+               )
             } else {
-               logger.info(it.getFullFilePath() + " " + it.modified.convertToLocalZone().toStr() +
-                           " <==> " +
-                           it.fileContent?.fileMeta?.imgExifOriginalDate?.convertToLocalZone()?.toStr() + str)
+               logger.info(
+                  it.getFullFilePath() + " " + it.modified.convertToLocalZone().toStr() +
+                        " <==> " +
+                        it.fileContent?.fileMeta?.imgExifOriginalDate?.convertToLocalZone()?.toStr() + str
+               )
             }
             count.incrementAndGet()
          }

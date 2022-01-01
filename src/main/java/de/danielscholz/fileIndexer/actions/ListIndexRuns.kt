@@ -38,7 +38,8 @@ class ListIndexRuns(private val pl: PersistenceLayer) {
 
    fun format(indexRun: IndexRun): String {
       val description = (indexRun.mediumDescription.isNotEmpty() || indexRun.mediumSerial.isNotEmpty()).ifTrue(
-            "  [" + (indexRun.mediumSerial.ifEmpty("") + ", " + indexRun.mediumDescription.ifEmpty("")).trim().removeSuffix(",") + "]", "")
+         "  [" + (indexRun.mediumSerial.ifEmpty("") + ", " + indexRun.mediumDescription.ifEmpty("")).trim().removeSuffix(",") + "]", ""
+      )
 
       val fileCount = pl.db.dbQueryUniqueLong(Queries.fileLocation2, listOf(indexRun.id))
 
@@ -55,7 +56,7 @@ class ListIndexRuns(private val pl: PersistenceLayer) {
       str += (indexRun.failureOccurred).ifTrue(", FAILURE occurred", "")
 
       return "No. @@" + indexRun.id + "@@: " + indexRun.runDate.convertToLocalZone().toStr() + "  " +
-             indexRun.pathPrefix + indexRun.path + "@@" + description + "  @@(files: " + fileCount.toStr() + str + ")"
+            indexRun.pathPrefix + indexRun.path + "@@" + description + "  @@(files: " + fileCount.toStr() + str + ")"
    }
 
    private fun List<String>.transform(): List<String> {
