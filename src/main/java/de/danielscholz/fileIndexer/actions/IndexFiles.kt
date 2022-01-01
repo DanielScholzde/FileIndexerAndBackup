@@ -116,7 +116,7 @@ class IndexFiles(
             }
 
             runBlocking {
-               supervisorScope {
+               supervisorScope { // needed?
                   withContext(Dispatchers.IO) {
 
                      repeat(times = min(numThreads, Config.INST.maxThreads)) {
