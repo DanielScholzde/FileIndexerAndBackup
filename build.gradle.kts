@@ -53,10 +53,13 @@ dependencies {
    testImplementation("org.hamcrest:hamcrest:2.2")
 }
 
-tasks.withType<JavaCompile>() {
+tasks.withType<JavaCompile> {
    options.encoding = "UTF-8"
 }
 
-tasks.withType<KotlinCompile>() {
-   kotlinOptions.jvmTarget = "11"
+tasks.withType<KotlinCompile> {
+   kotlinOptions {
+      jvmTarget = "11"
+      freeCompilerArgs = freeCompilerArgs + "-Xopt-in=kotlin.time.ExperimentalTime"
+   }
 }

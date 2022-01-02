@@ -6,9 +6,11 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.roundToInt
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 
 class Statistic(
-   var startTime: Long = 0,
+   var startTime: TimeMark = TimeSource.Monotonic.markNow(),
    var indexedFilesCount: AtomicInteger = AtomicInteger(),
    var indexedFilesSize: AtomicLong = AtomicLong(),
    var newIndexedFilesCount: AtomicInteger = AtomicInteger(),

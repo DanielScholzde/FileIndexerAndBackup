@@ -9,6 +9,9 @@ import java.text.DecimalFormat
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.roundToInt
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
+
 
 class IndexFilesStats(var currentParallelReads: () -> String) {
 
@@ -34,12 +37,12 @@ class IndexFilesStats(var currentParallelReads: () -> String) {
    var filesCountAll = 0
 
    @Volatile
-   private var timestampMillisBegin = 0L
+   private var timestampMillisBegin: TimeMark = TimeSource.Monotonic.markNow()
 
    private val decimalFormat = DecimalFormat("0.00")
 
    fun start() {
-      timestampMillisBegin = System.currentTimeMillis()
+      timestampMillisBegin = TimeSource.Monotonic.markNow()
    }
 
    fun stop() {
@@ -58,8 +61,7 @@ class IndexFilesStats(var currentParallelReads: () -> String) {
 
    private fun calcProcessedMbPerSecond(): Double {
       val processedMbPerSecond = indexedFilesSize.get() /
-            ((System.currentTimeMillis() - timestampMillisBegin) / 1_000).ifZero(1) /
-            1_000_000.0
+            (timestampMillisBegin.elapsedNow().inWholeSeconds).ifZero(1) / 1_000_000.0
 //      try {
 //         val duration = (System.nanoTime() - startTime) / 1000 // microsec
 //         if (duration > 0) {
@@ -93,10 +95,7 @@ class IndexFilesStats(var currentParallelReads: () -> String) {
       return ""
    }
 
-   fun getDuration(): String {
-      val duration = (System.currentTimeMillis() - timestampMillisBegin) / 1_000
-      return formatTime(duration)
-   }
+   fun getDuration() = formatTime(timestampMillisBegin.elapsedNow().inWholeSeconds)
 
    private fun formatTime(seconds: Long): String {
       fun leftPad(n: Long) = (if (n < 10) "0$n" else "" + n)
