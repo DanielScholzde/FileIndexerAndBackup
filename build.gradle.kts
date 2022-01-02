@@ -14,7 +14,7 @@ plugins {
    java
    application
    kotlin("jvm") version "1.6.10"
-   //id("org.jetbrains.compose") version "1.0.0"
+   id("org.jetbrains.compose") version "1.0.1"
 }
 
 application {
@@ -27,7 +27,7 @@ repositories {
 }
 
 dependencies {
-   //implementation(compose.desktop.currentOs)
+   implementation(compose.desktop.currentOs)
    implementation("de.danielscholz:KArgParser:0.1-SNAPSHOT")
    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion")
    implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")

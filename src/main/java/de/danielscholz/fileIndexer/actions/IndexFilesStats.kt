@@ -4,15 +4,13 @@ import de.danielscholz.fileIndexer.Global
 import de.danielscholz.fileIndexer.common.formatAsFileSize
 import de.danielscholz.fileIndexer.common.ifZero
 import de.danielscholz.fileIndexer.common.leftPad
-import de.danielscholz.fileIndexer.gui.InfopanelSwing
 import org.slf4j.LoggerFactory
 import java.text.DecimalFormat
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
-import javax.swing.SwingUtilities
 import kotlin.math.roundToInt
 
-class IndexFilesStats(private var currentParallelReads: () -> String) {
+class IndexFilesStats(var currentParallelReads: () -> String) {
 
    private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -38,53 +36,28 @@ class IndexFilesStats(private var currentParallelReads: () -> String) {
    @Volatile
    private var timestampMillisBegin = 0L
 
-   @Volatile
-   private var processedMbPerSecond: Double = 0.0
-
    private val decimalFormat = DecimalFormat("0.00")
 
-   private val thread = Thread({ refresh() }, "GUI-Refresh")
-
-   fun startRefresh() {
+   fun start() {
       timestampMillisBegin = System.currentTimeMillis()
-      thread.start()
    }
 
-   fun stopRefresh() {
-      thread.interrupt()
+   fun stop() {
+
    }
 
-   private fun refresh() {
-      try {
-         while (true) {
-            SwingUtilities.invokeLater { updateInfoPanel() }
-            Thread.sleep(1000)
-         }
-      } catch (e: InterruptedException) {
-         //
-      }
-   }
 
-   private fun updateInfoPanel() {
-      calcProcessedMbPerSecond()
+   fun getProgressTotal() = "${(indexedFilesSize.get() * 100 / filesSizeAll.ifZero(1))}% " +
+         "[${indexedFilesSize.get().formatAsFileSize()} / ${filesSizeAll.formatAsFileSize()}] " +
+         "[$indexedFilesCount / $filesCountAll]"
 
-      InfopanelSwing.setProgressTotal(
-         "${(indexedFilesSize.get() * 100 / filesSizeAll.ifZero(1))}% " +
-               "[${indexedFilesSize.get().formatAsFileSize()} / ${filesSizeAll.formatAsFileSize()}] " +
-               "[$indexedFilesCount / $filesCountAll]"
-      )
-      InfopanelSwing.setDuration(getDuration())
-      InfopanelSwing.setRemainingDuration(getEstimatedDuration())
-      InfopanelSwing.setFastModeData(getFastModeStats())
-      InfopanelSwing.setNewIndexedData(Global.stat.newIndexedFilesSize.get().formatAsFileSize())
-      InfopanelSwing.setProcessedMbPerSec(decimalFormat.format(processedMbPerSecond) + " MB/sec.")
-      InfopanelSwing.setDbTime("" + (Global.stat.queryTime / 1_000_000_000) + " sec. / number: ${Global.stat.queryCount}")
-      InfopanelSwing.setCurrentParallelReads(currentParallelReads())
-      InfopanelSwing.setCurrentProcessedFilename(currentProcessedFile)
-   }
+   fun getDbTime() = "" + (Global.stat.queryTime / 1_000_000_000) + " sec. / number: ${Global.stat.queryCount}"
 
-   private fun calcProcessedMbPerSecond() {
-      processedMbPerSecond = indexedFilesSize.get() /
+
+   fun getProcessedMbPerSec() = decimalFormat.format(calcProcessedMbPerSecond()) + " MB/sec."
+
+   private fun calcProcessedMbPerSecond(): Double {
+      val processedMbPerSecond = indexedFilesSize.get() /
             ((System.currentTimeMillis() - timestampMillisBegin) / 1_000).ifZero(1) /
             1_000_000.0
 //      try {
@@ -108,9 +81,11 @@ class IndexFilesStats(private var currentParallelReads: () -> String) {
 //      } catch (e: Exception) {
 //         logger.warn("Error on calculating of processedBytesPerSecond")
 //      }
+      return processedMbPerSecond
    }
 
-   private fun getEstimatedDuration(): String {
+   fun getRemainingDuration(): String {
+      val processedMbPerSecond = calcProcessedMbPerSecond()
       val secondsLeft = if (processedMbPerSecond > 0.1) ((filesSizeAll - indexedFilesSize.get()) / 1_000_000 / processedMbPerSecond).toLong() else -1
       if (secondsLeft >= 0) {
          return formatTime(secondsLeft)
@@ -118,7 +93,7 @@ class IndexFilesStats(private var currentParallelReads: () -> String) {
       return ""
    }
 
-   private fun getDuration(): String {
+   fun getDuration(): String {
       val duration = (System.currentTimeMillis() - timestampMillisBegin) / 1_000
       return formatTime(duration)
    }
@@ -132,7 +107,7 @@ class IndexFilesStats(private var currentParallelReads: () -> String) {
       return "$hour:${leftPad(min)}:${leftPad(sec)}"
    }
 
-   private fun getFastModeStats(): String {
+   fun getFastModeStats(): String {
       if (Global.stat.fastModeHitCount.get() > 0) {
          return ("" + (Global.stat.fastModeHitCount.get() * 100.0 /
                (Global.stat.fastModeHitCount.get() + Global.stat.notFastModeHitCount.get())).roundToInt()).leftPad(3) + "% Hits"

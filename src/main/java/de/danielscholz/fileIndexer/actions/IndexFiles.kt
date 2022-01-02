@@ -3,7 +3,7 @@ package de.danielscholz.fileIndexer.actions
 import de.danielscholz.fileIndexer.Config
 import de.danielscholz.fileIndexer.Global
 import de.danielscholz.fileIndexer.common.*
-import de.danielscholz.fileIndexer.gui.InfopanelSwing
+import de.danielscholz.fileIndexer.gui.InfoPanel
 import de.danielscholz.fileIndexer.img.ImgUtils.extractExifOriginalDateAndDimension
 import de.danielscholz.fileIndexer.img.ImgUtils.extractThumbnail
 import de.danielscholz.fileIndexer.img.ImgUtils.scaleAndSaveImg
@@ -111,8 +111,8 @@ class IndexFiles(
 
          try {
             if (Config.INST.progressWindow) {
-               InfopanelSwing.show()
-               stat.startRefresh()
+               InfoPanel.show(stat)
+               stat.start()
             }
 
             runBlocking {
@@ -140,8 +140,8 @@ class IndexFiles(
          } finally {
             pl.clearFilePathCache()
             if (Config.INST.progressWindow) {
-               stat.stopRefresh()
-               InfopanelSwing.close()
+               stat.stop()
+               InfoPanel.close()
             }
          }
       }
